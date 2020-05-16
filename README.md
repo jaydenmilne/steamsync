@@ -58,4 +58,11 @@ If you get EGS working on Linux, you probably don't need this tool.
 Open an issue on GitHub.
 
 #### Steam crashed after opening my library the first time, but worked after that
-Weird, I know. Mine did that too ¯\_(ツ)_/¯
+Weird, right? Mine did that too ¯\_(ツ)_/¯
+
+#### I want to go back to the way it was
+steamsync will backup your `shortcuts.vdf` file by default every time you run it.
+
+Go to `C:\Program Files (x86)\Steam\userdata\{your steam userid}\config`. You will see some
+`shortcuts.vdf-DATE.bak` files. Delete `shortcuts.vdf` (this is the one steamsync modified),
+and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam. 
