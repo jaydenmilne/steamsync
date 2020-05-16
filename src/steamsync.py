@@ -7,11 +7,13 @@ import math
 
 import vdf
 
+
 class GameDefinition:
     """
     Data class to hold a game definition. Should be everything that the steamsync UI and that
     Steam itself needs to make a shortcut
     """
+
     def __init__(self, executable_path, display_name, app_name, install_folder, launch_arguments):
         self.app_name = app_name
         self.executable_path = executable_path
@@ -19,18 +21,21 @@ class GameDefinition:
         self.install_folder = install_folder
         self.launch_arguments = launch_arguments
 
+
 class SteamAccount:
     """
     Data class to associate steamid and username
     """
+
     def __init__(self, steamid, username):
         self.steamid = steamid
         self.username = username
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Utility to import games from the Epic Games Store to your Steam library",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     # TODO: make this path to egl root and not to manifests
@@ -38,23 +43,22 @@ def parse_arguments():
         "--egs-manifests",
         default="C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests",
         help="Path to search for Epic Games Store manifest files",
-        required=False
+        required=False,
     )
 
     parser.add_argument(
         "--steam-path",
         default="C:\\Program Files (x86)\\Steam",
         help="Path to Steam installation",
-        required=False
+        required=False,
     )
-
 
     parser.add_argument(
         "--all",
         default=False,
         help="Install all games found, do not prompt user to select which",
         required=False,
-        action='store_true'
+        action="store_true",
     )
 
     parser.add_argument(
@@ -62,7 +66,7 @@ def parse_arguments():
         default=False,
         help="Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak",
         required=False,
-        action='store_true'
+        action="store_true",
     )
 
     parser.add_argument(
@@ -81,13 +85,13 @@ def egs_collect_games(egs_manifest_path):
     """
     print(f"Scanning EGS manifest store ({egs_manifest_path})...")
     # loop over every .item fiile
-    pathlist = Path(egs_manifest_path).glob('*.item')
+    pathlist = Path(egs_manifest_path).glob("*.item")
     games = list()
 
     for path in pathlist:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             item = json.load(f)
-            
+
             app_name = path
             display_name = path
 
@@ -109,36 +113,41 @@ def egs_collect_games(egs_manifest_path):
             if "InstallLocation" not in item:
                 print(f"\tSkipping '{display_name}' since it apparently doesn't have an 'InstallLocation'")
                 continue
-            
+
             install_location = os.path.normpath(item["InstallLocation"])
 
             if "LaunchExecutable" not in item:
                 print(f"\tSkipping '{display_name}' since it apparently doesn't have an executable")
                 continue
-            
+
             if "LaunchCommand" not in item:
-                print(f"\'{display_name}' doesn't have LaunchCommands?")
+                print(f"'{display_name}' doesn't have LaunchCommands?")
                 launch_arguments = ""
             else:
                 # I think this is for command line arguments...?
-                launch_arguments = item["LaunchCommand"]  
+                launch_arguments = item["LaunchCommand"]
 
             launch_executable = os.path.normpath(item["LaunchExecutable"])
 
-            # This causes trouble for some games 
+            # This causes trouble for some games
             # (D:\Epic Games\RiME + /RiME/SirenGame/Binaries/Win64/RiME.exe = D:/RiME/SirenGame/Binaries/Win64/RiME.exe ???)
-            #complete_path = os.path.join(install_location, launch_executable)
+            # complete_path = os.path.join(install_location, launch_executable)
 
-            complete_path = os.path.normpath(install_location) + os.path.sep + os.path.normpath(launch_executable)
+            complete_path = (
+                os.path.normpath(install_location) + os.path.sep + os.path.normpath(launch_executable)
+            )
 
             if not os.path.exists(complete_path):
                 print(install_location, launch_executable)
                 print(f"\tWarning: path `{complete_path}` does not exist for game {display_name}, excluding!")
                 continue
-            games.append(GameDefinition(complete_path, display_name, app_name, install_location, launch_arguments))
+            games.append(
+                GameDefinition(complete_path, display_name, app_name, install_location, launch_arguments,)
+            )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
     return games
+
 
 def print_games(games):
     """
@@ -150,14 +159,15 @@ def print_games(games):
     for i, game in enumerate(games, start=1):
         print(row_fmt.format(i, game.display_name[:25], game.app_name, game.executable_path))
 
+
 def filter_games(games):
     print("Which games do you want to install (blank = all, or comma seperated list of numbers from table)?")
     selection = input(": ").strip()
     if selection == "":
         return games
-    
+
     selection = selection.split(",")
-    
+
     selected = list()
     for idx in selection:
         idx = idx.strip()
@@ -165,8 +175,10 @@ def filter_games(games):
 
     print(f"Selected {len(selected)} games to install")
 
+
 ####################################################################################################
-# Steam 
+# Steam
+
 
 def enumerate_steam_accounts(steam_path):
     """
@@ -182,12 +194,13 @@ def enumerate_steam_accounts(steam_path):
             # we need to look inside this user's localconfig.vdf to figure out their
             # display name
 
-            with open(os.path.join(child.path, "config/localconfig.vdf"), 'r') as localconfig:
+            with open(os.path.join(child.path, "config/localconfig.vdf"), "r") as localconfig:
                 cfg = vdf.load(localconfig)
                 username = cfg["UserLocalConfigStore"]["friends"]["PersonaName"]
                 accounts.append(SteamAccount(steamid, username))
 
     return accounts
+
 
 def prompt_for_steam_account(accounts):
     """
@@ -219,6 +232,7 @@ def prompt_for_steam_account(accounts):
         print("You done messed up AARON")
         exit(-1)
 
+
 def to_shortcut(game):
     """
     Turns the given GameDefinition into a shortcut dict, suitable to injecting
@@ -238,24 +252,21 @@ def to_shortcut(game):
         "Devkit": 0,
         "DevkitGameID": "",
         "LastPlayTime": 0,  # todo - is this right? if we really wanted we could parse this in from EGS manifest files...
-        "tags": {
-            "0": "steamsync",
-            "1": "epicgamesstore"
-        }
-
+        "tags": {"0": "steamsync", "1": "epicgamesstore"},
     }
+
 
 def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
     shortcut_file_path = os.path.join(steam_path, "userdata", steamid, "config", "shortcuts.vdf")
-    
+
     if not os.path.exists(shortcut_file_path):
         print(f"Could not find shortcuts file at `{shortcut_file_path}`")
         exit(-2)
-    
+
     # read in the shortcuts file
     with open(shortcut_file_path, "rb") as sf:
         shortcuts = vdf.binary_load(sf)
-    
+
     # Make a set that contains the path of every shortcut installed. If a path is already in the
     # shortuts file, we won't add another one (ie the path is what makes a shortcut unique)
     all_paths = set()
@@ -274,7 +285,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
         last_index += 1
         shortcuts["shortcuts"][str(last_index)] = to_shortcut(game)
         added += 1
-    
+
     print(f"Added {added} new games")
     if added == 0:
         print(f"No need to update `shortcuts.vdf`")
@@ -286,10 +297,11 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
     os.rename(shortcut_file_path, new_filename)
 
     new_bytes = vdf.binary_dumps(shortcuts)
-    with open(shortcut_file_path, 'wb') as shortcut_file:
+    with open(shortcut_file_path, "wb") as shortcut_file:
         shortcut_file.write(new_bytes)
-    
+
     print("Updated `shortcuts.vdf` successfully!")
+
 
 ####################################################################################################
 # Main
@@ -321,6 +333,6 @@ if __name__ == "__main__":
 
     if steamid == "":
         steamid = prompt_for_steam_account(accounts)
-    
+
     print(f"Installing shortcuts for SteamID `{steamid}``")
     add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously)
