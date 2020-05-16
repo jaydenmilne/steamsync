@@ -1,4 +1,4 @@
-# steam-sync
+# steamsync
 Simple command line tool to automatically add games from the Epic Games Launcher
 to Steam.
 
