@@ -171,9 +171,10 @@ def filter_games(games):
     selected = list()
     for idx in selection:
         idx = idx.strip()
-        selected.append(games[int(idx)])
+        selected.append(games[int(idx) - 1])
 
     print(f"Selected {len(selected)} games to install")
+    return selected
 
 
 ####################################################################################################
@@ -290,11 +291,16 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
     if added == 0:
         print(f"No need to update `shortcuts.vdf`")
         return
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    new_filename = shortcut_file_path + f"-{timestamp}.bak"
 
-    print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
-    os.rename(shortcut_file_path, new_filename)
+    if skip_backup:
+        print("Not backing up `shortcuts.vdf` since you enjoy danger")
+        os.remove(shortcut_file_path)
+    else:
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        new_filename = shortcut_file_path + f"-{timestamp}.bak"
+
+        print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
+        os.rename(shortcut_file_path, new_filename)
 
     new_bytes = vdf.binary_dumps(shortcuts)
     with open(shortcut_file_path, "wb") as shortcut_file:
@@ -328,11 +334,11 @@ if __name__ == "__main__":
                 steamid = account.steamid
         if username == steamid:
             # bit hackish, triggers selection below if the username wasn't found
-            print(f"!!! SteamID for `{steamid}`` not found.")
+            print(f"!!! SteamID for `{steamid}` not found.")
             steamid = ""
 
     if steamid == "":
         steamid = prompt_for_steam_account(accounts)
 
-    print(f"Installing shortcuts for SteamID `{steamid}``")
+    print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously)

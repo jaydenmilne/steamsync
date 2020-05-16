@@ -70,3 +70,17 @@ and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam.
 #### I got a `could not find shortcuts file at ...` error
 Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. 
 steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
+
+#### Can this run automagically?
+Yes, yes it can!
+
+1. Open Task Scheduler (start + type "task...")
+2. Action Menu ➡ Create Basic Task
+3. Fill in a name and description
+4. Set the trigger you want to use (daily, log in, etc), Next
+5. Action = Start a Program
+6. Program/Script is `pythonw`
+7. Add arguments `C:\Users\{username}\AppData\Local\Programs\Python\Python38\Scripts\steamsync.py --all --steamid={steam id}`, Next
+8. Make sure to restart Steam once in a while
+
+TADA!
