@@ -1,5 +1,6 @@
 # steamsync
 [![PyPI version](https://badge.fury.io/py/steamsync.svg)](https://badge.fury.io/py/steamsync) 
+
 Simple command line tool to automatically add games from the Epic Games Launcher
 to Steam.
 
