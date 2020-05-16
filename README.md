@@ -66,3 +66,7 @@ steamsync will backup your `shortcuts.vdf` file by default every time you run it
 Go to `C:\Program Files (x86)\Steam\userdata\{your steam userid}\config`. You will see some
 `shortcuts.vdf-DATE.bak` files. Delete `shortcuts.vdf` (this is the one steamsync modified),
 and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam. 
+
+#### I got a `could not find shortcuts file at ...` error
+Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. 
+steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
