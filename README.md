@@ -1,4 +1,5 @@
 # steamsync
+[![PyPI version](https://badge.fury.io/py/steamsync.svg)](https://badge.fury.io/py/steamsync) 
 Simple command line tool to automatically add games from the Epic Games Launcher
 to Steam.
 
@@ -19,7 +20,8 @@ $ steamsync.py
 3. When installing Python, make sure to install pip and to *add Python to your PATH*
 4. Open Commmand Prompt (search Start Menu for cmd.exe)
 5. Type `pip install steamsync`, press enter. 
-6. Type `steamsync`
+6. Type `steamsync.py`, press enter. The tool will walk you through everything else.
+   Press ctrl+c if you get scared
 
 ### FAQ
 #### Does this work on OSX?
