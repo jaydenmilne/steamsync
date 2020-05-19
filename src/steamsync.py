@@ -76,10 +76,19 @@ def parse_arguments():
         required=False,
     )
 
+    parser.add_argument(
+        "--use-paths",
+        default=False,
+        action="store_true",
+        help="Use the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`) instead of an Epic Games"
+        + "Launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`). Using "
+        + "the path to the executable gives you shortcut icons in the Steam launcher.",
+        required=False,
+    )
     return parser.parse_args()
 
 
-def egs_collect_games(egs_manifest_path):
+def egs_collect_games(egs_manifest_path, use_executable_path):
     """
     Returns an array of GameDefinitions of all the installed EGS games
     """
@@ -87,6 +96,11 @@ def egs_collect_games(egs_manifest_path):
     # loop over every .item fiile
     pathlist = Path(egs_manifest_path).glob("*.item")
     games = list()
+
+    if use_executable_path:
+        print("\t⚠⚠ WARNING: ⚠⚠")
+        print("\tUsing the path to the executable instead of the Epic Games Launcher URI")
+        print("\tYou may experience issues with online games (eg GTAV!)")
 
     for path in pathlist:
         # EGS seems to write their json files out as utf-8
@@ -102,27 +116,27 @@ def egs_collect_games(egs_manifest_path):
                 display_name = item["DisplayName"]
 
             if item["bIsIncompleteInstall"]:
-                print(f"\tSkipping '{display_name}' since installation is incomplete")
+                print(f"\t- Skipping '{display_name}' since installation is incomplete")
                 continue
             elif not item["bIsApplication"]:
-                print(f"\tSkipping '{display_name}' since it isn't an application")
+                print(f"\t- Skipping '{display_name}' since it isn't an application")
                 continue
             elif "games" not in item["AppCategories"]:
-                print(f"\tSkipping '{display_name}' since it doesn't have the category 'games'")
+                print(f"\t- Skipping '{display_name}' since it doesn't have the category 'games'")
                 continue
 
             if "InstallLocation" not in item:
-                print(f"\tSkipping '{display_name}' since it apparently doesn't have an 'InstallLocation'")
+                print(f"\t- Skipping '{display_name}' since it apparently doesn't have an 'InstallLocation'")
                 continue
 
             install_location = os.path.normpath(item["InstallLocation"])
 
             if "LaunchExecutable" not in item:
-                print(f"\tSkipping '{display_name}' since it apparently doesn't have an executable")
+                print(f"\t- Skipping '{display_name}' since it apparently doesn't have an executable")
                 continue
 
             if "LaunchCommand" not in item:
-                print(f"'{display_name}' doesn't have LaunchCommands?")
+                print(f"\t- '{display_name}' doesn't have LaunchCommands?")
                 launch_arguments = ""
             else:
                 # I think this is for command line arguments...?
@@ -134,16 +148,27 @@ def egs_collect_games(egs_manifest_path):
             # (D:\Epic Games\RiME + /RiME/SirenGame/Binaries/Win64/RiME.exe = D:/RiME/SirenGame/Binaries/Win64/RiME.exe ???)
             # complete_path = os.path.join(install_location, launch_executable)
 
-            complete_path = (
+            executable_path = (
                 os.path.normpath(install_location) + os.path.sep + os.path.normpath(launch_executable)
             )
 
-            if not os.path.exists(complete_path):
-                print(install_location, launch_executable)
-                print(f"\tWarning: path `{complete_path}` does not exist for game {display_name}, excluding!")
-                continue
+            # found by looking creating a shortcut on the desktop in the EGL and inspecting it
+            # using the URI instead of executable_path allows some games with online services
+            # to work (eg GTAV), but there are no icons in the steam launcher from the executable
+            uri_path = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+
+            if use_executable_path:
+                shortcut_path = uri_path
+            else:
+                if not os.path.exists(executable_path):
+                    print(
+                        f"\t- Warning: path `{executable_path}` does not exist for game {display_name}, skipping!"
+                    )
+                    continue
+                shortcut_path = executable_path
+
             games.append(
-                GameDefinition(complete_path, display_name, app_name, install_location, launch_arguments,)
+                GameDefinition(shortcut_path, display_name, app_name, install_location, launch_arguments,)
             )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
@@ -312,6 +337,8 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
         shortcut_file.write(new_bytes)
 
     print("Updated `shortcuts.vdf` successfully!")
+    print()
+    print("➡ Restart Steam!")
 
 
 ####################################################################################################
@@ -319,7 +346,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    games = egs_collect_games(args.egs_manifests)
+    games = egs_collect_games(args.egs_manifests, args.use_paths)
     print_games(games)
 
     if not args.all:
@@ -347,3 +374,4 @@ if __name__ == "__main__":
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously)
+    print("Done.")

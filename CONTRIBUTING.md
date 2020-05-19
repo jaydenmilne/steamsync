@@ -18,3 +18,7 @@ Feel free to work on any of these and remove them from the list / submit a PR
 - Currently, we are hardcoding the path for Steam and the EGS. I know we can 
   detect the Steam installation location through registry keys (see pysteam).
   Something similar might be possible with the EGS
+- Since the switch to using URIs instead of paths (use the `--use-paths` switch 
+  for the old behavior), there are no icons by default in the Steam library (with
+  paths it will at least pull in the executable's icons). Maybe we can extract
+  them somewhere?
