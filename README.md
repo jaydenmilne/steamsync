@@ -9,6 +9,7 @@ Makes playing all of those free EGS games in Big Picture Mode a lot easier.
 steamsync will scan all of the Epic Games Store games installed on your computer and 
 add them to your Steam Library. If a shortcut with the same path already exists, you can
 skip it. 
+
 ## Installation (brief)
 Requires > Python 3.6 and Windows
 
@@ -17,7 +18,7 @@ $ pip install steamsync
 $ steamsync.py
 ```
 
-## Installation and Usage (for beginners, command lines are scary!)
+## Installation and Usage (for beginners)
 
 1. [Download Python 3.8](https://www.python.org/downloads/)
 2. Choose the latest version of Python 3.8, and get the "Windows x86-64 executable installer" option
@@ -26,7 +27,7 @@ $ steamsync.py
 5. Type `pip install steamsync`, press enter. 
 6. Make sure Steam is not running!
 7. Type `steamsync.py`, press enter. The tool will walk you through everything else.
-   Press ctrl+c if you get scared
+   Press ctrl+c if you get scared and want to abort.
 
 ## Usage
 ```
@@ -58,7 +59,8 @@ If you get EGS working on Linux, you probably don't need this tool.
 Open an issue on GitHub.
 
 #### Steam crashed after opening my library the first time, but worked after that
-Weird, right? Mine did that too ¯\_(ツ)_/¯
+Weird, right? Mine did that too ¯\\_(ツ)_/¯. Maybe loading 52 shortcuts at once
+was too much for it.
 
 #### I want to go back to the way it was
 steamsync will backup your `shortcuts.vdf` file by default every time you run it.
@@ -72,7 +74,7 @@ Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Gam
 steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
 
 #### Can this run automagically?
-Yes, yes it can!
+Yes, yes it can! (you may need to adjust paths below)
 
 1. Open Task Scheduler (start + type "task...")
 2. Action Menu ➡ Create Basic Task

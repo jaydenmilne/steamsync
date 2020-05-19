@@ -1,4 +1,4 @@
-Not much to say. We live dangerously so we don't have tests or anything ¯\_(ツ)_/¯.
+Not much to say. We live dangerously so we don't have tests or anything ¯\\_(ツ)_/¯.
 
 We format the code with `black`.
 
