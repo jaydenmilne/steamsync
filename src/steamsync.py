@@ -89,7 +89,8 @@ def egs_collect_games(egs_manifest_path):
     games = list()
 
     for path in pathlist:
-        with open(path, "r") as f:
+        # EGS seems to write their json files out as utf-8
+        with open(path, "r", encoding="utf-8") as f:
             item = json.load(f)
 
             app_name = path
@@ -195,7 +196,11 @@ def enumerate_steam_accounts(steam_path):
             # we need to look inside this user's localconfig.vdf to figure out their
             # display name
 
-            with open(os.path.join(child.path, "config/localconfig.vdf"), "r") as localconfig:
+            # here we just replace any malformed characters since we are only doing this to get the
+            # display name
+            with open(
+                os.path.join(child.path, "config/localconfig.vdf"), "r", encoding="utf-8", errors="replace"
+            ) as localconfig:
                 cfg = vdf.load(localconfig)
                 username = cfg["UserLocalConfigStore"]["friends"]["PersonaName"]
                 accounts.append(SteamAccount(steamid, username))
