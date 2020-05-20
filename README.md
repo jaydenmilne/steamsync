@@ -10,6 +10,9 @@ steamsync will scan all of the Epic Games Store games installed on your computer
 add them to your Steam Library. If a shortcut with the same path already exists, you can
 skip it. 
 
+steamsync attempts to be simple. It does not attempt to fetch any banner art, it
+ simply uses the executable's icon as the icon in steam. 
+ 
 ## Installation (brief)
 Requires > Python 3.6 and Windows
 
@@ -31,8 +34,8 @@ $ steamsync.py
 
 ## Usage
 ```
-python steamsync.py -h
-usage: steamsync.py [-h] [--egs-manifests EGS_MANIFESTS] [--steam-path STEAM_PATH] [--all] [--live-dangerously] [--steamid STEAMID]
+python .\steamsync.py -h
+usage: steamsync.py [-h] [--egs-manifests EGS_MANIFESTS] [--steam-path STEAM_PATH] [--all] [--live-dangerously] [--steamid STEAMID] [--use-paths]
 
 Utility to import games from the Epic Games Store to your Steam library
 
@@ -45,6 +48,7 @@ optional arguments:
   --all                 Install all games found, do not prompt user to select which (default: False)
   --live-dangerously    Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak (default: False)
   --steamid STEAMID     SteamID or username to install the shortcuts to, only needed if >1 accounts on this machine (default: )
+  --use-paths           Use the path to the executable (eg `C:\Fortnite\Fortnite.exe`) instead of an Epic GamesLauncher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`). (default: False)  
   ```
 
 ### FAQ
