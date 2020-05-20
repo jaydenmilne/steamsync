@@ -4,11 +4,12 @@
 Simple command line tool to automatically add games from the Epic Games Launcher
 to Steam.
 
-Makes playing all of those free EGS games in Big Picture Mode a lot easier.
+Makes playing all of those free EGS games in Big Picture Mode a lot easier. In my experience,
+when launching from Big Picture Mode, Steam Input works as expected (even in Fortnite!).
 
 steamsync will scan all of the Epic Games Store games installed on your computer and 
-add them to your Steam Library. If a shortcut with the same path already exists, you can
-skip it. 
+add them to your Steam Library. If a shortcut with the same path already exists, it will
+skip it, so it's safe to import all of your games over and over.
 
 steamsync attempts to be simple. It does not attempt to fetch any banner art, it
  simply uses the executable's icon as the icon in steam. 
