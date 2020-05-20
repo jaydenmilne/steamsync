@@ -1,3 +1,5 @@
+# LICENSE: AGPLv3. See LICENSE at root of repo
+
 import argparse
 import json
 import os
@@ -20,6 +22,7 @@ class GameDefinition:
         self.display_name = display_name
         self.install_folder = install_folder
         self.launch_arguments = launch_arguments
+        self.uri = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
 
 
 class SteamAccount:
@@ -81,14 +84,13 @@ def parse_arguments():
         default=False,
         action="store_true",
         help="Use the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`) instead of an Epic Games"
-        + "Launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`). Using "
-        + "the path to the executable gives you shortcut icons in the Steam launcher.",
+        + "Launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`).",
         required=False,
     )
     return parser.parse_args()
 
 
-def egs_collect_games(egs_manifest_path, use_executable_path):
+def egs_collect_games(egs_manifest_path):
     """
     Returns an array of GameDefinitions of all the installed EGS games
     """
@@ -96,11 +98,6 @@ def egs_collect_games(egs_manifest_path, use_executable_path):
     # loop over every .item fiile
     pathlist = Path(egs_manifest_path).glob("*.item")
     games = list()
-
-    if use_executable_path:
-        print("\t⚠⚠ WARNING: ⚠⚠")
-        print("\tUsing the path to the executable instead of the Epic Games Launcher URI")
-        print("\tYou may experience issues with online games (eg GTAV!)")
 
     for path in pathlist:
         # EGS seems to write their json files out as utf-8
@@ -154,21 +151,16 @@ def egs_collect_games(egs_manifest_path, use_executable_path):
 
             # found by looking creating a shortcut on the desktop in the EGL and inspecting it
             # using the URI instead of executable_path allows some games with online services
-            # to work (eg GTAV), but there are no icons in the steam launcher from the executable
-            uri_path = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+            # to work (eg GTAV)
 
-            if use_executable_path:
-                shortcut_path = uri_path
-            else:
-                if not os.path.exists(executable_path):
-                    print(
-                        f"\t- Warning: path `{executable_path}` does not exist for game {display_name}, skipping!"
-                    )
-                    continue
-                shortcut_path = executable_path
+            if not os.path.exists(executable_path):
+                print(
+                    f"\t- Warning: path `{executable_path}` does not exist for game {display_name}, skipping!"
+                )
+                continue
 
             games.append(
-                GameDefinition(shortcut_path, display_name, app_name, install_location, launch_arguments,)
+                GameDefinition(executable_path, display_name, app_name, install_location, launch_arguments)
             )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
@@ -264,16 +256,22 @@ def prompt_for_steam_account(accounts):
         exit(-1)
 
 
-def to_shortcut(game):
+def to_shortcut(game, use_executable_path):
     """
     Turns the given GameDefinition into a shortcut dict, suitable to injecting
     into Steam's shortcuts.vdf
     """
+
+    if use_executable_path:
+        shortcut = game.executable_path
+    else:
+        shortcut = game.uri
+
     return {
         "appname": game.display_name,
-        "Exe": game.executable_path,
+        "Exe": shortcut,
         "StartDir": game.install_folder,
-        "icon": "",
+        "icon": game.executable_path,
         "ShortcutPath": "",
         "LaunchOptions": game.launch_arguments,
         "IsHidden": 0,
@@ -287,11 +285,19 @@ def to_shortcut(game):
     }
 
 
-def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
+def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_executable_path):
+    if use_executable_path:
+        print()
+        print("⚠ ⚠ WARNING: ⚠ ⚠")
+        print("Using the path to the executable instead of the Epic Games Launcher URI")
+        print("You may experience issues with online games (eg GTAV!)")
+        print()
+
     shortcut_file_path = os.path.join(steam_path, "userdata", steamid, "config", "shortcuts.vdf")
 
     if not os.path.exists(shortcut_file_path):
         print(f"Could not find shortcuts file at `{shortcut_file_path}`")
+        print("Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting.")
         exit(-2)
 
     # read in the shortcuts file
@@ -310,11 +316,12 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
     added = 0
     last_index = int(max(shortcuts["shortcuts"].keys()))
     for game in games:
-        if game.executable_path in all_paths:
+        shortcut = game.executable_path if use_executable_path else game.uri
+        if shortcut in all_paths:
             print(f"Not creating shortcut for `{game.display_name}` since it already has one")
             continue
         last_index += 1
-        shortcuts["shortcuts"][str(last_index)] = to_shortcut(game)
+        shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_executable_path)
         added += 1
 
     print(f"Added {added} new games")
@@ -338,7 +345,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
 
     print("Updated `shortcuts.vdf` successfully!")
     print()
-    print("➡ Restart Steam!")
+    print("➡   Restart Steam!")
 
 
 ####################################################################################################
@@ -346,7 +353,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    games = egs_collect_games(args.egs_manifests, args.use_paths)
+    games = egs_collect_games(args.egs_manifests)
     print_games(games)
 
     if not args.all:
@@ -373,5 +380,5 @@ if __name__ == "__main__":
         steamid = prompt_for_steam_account(accounts)
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
-    add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously)
+    add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously, args.use_paths)
     print("Done.")
