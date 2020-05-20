@@ -233,7 +233,7 @@ def prompt_for_steam_account(accounts):
     Returns a steamid
     """
     if len(accounts) == 1:
-        return accounts[0][0]
+        return accounts[0].steamid
 
     print("Found multiple Steam accounts:")
     row_fmt = "{: >3} | {: <17} | {: <25}"
@@ -365,6 +365,11 @@ if __name__ == "__main__":
     steamid = args.steamid
     accounts = enumerate_steam_accounts(args.steam_path)
 
+    if len(accounts) == 1 and steamid != "":
+        print(
+            "FYI: There is only one Steam account found on your computer, so you don't need to provide --steamid"
+        )
+
     # if they gave a username, find the steamid associated with it
     if not steamid.isdigit() and steamid != "":
         username = steamid
@@ -373,7 +378,13 @@ if __name__ == "__main__":
                 steamid = account.steamid
         if username == steamid:
             # bit hackish, triggers selection below if the username wasn't found
-            print(f"!!! SteamID for `{steamid}` not found.")
+            print("⚠ ⚠ WARNING: ⚠ ⚠")
+            print(f"SteamID for `{steamid}` not found!")
+            print("The SteamID you provided could not be found on your local machine.")
+            print(
+                "If you are providing the human readable name and not a numeric SteamID, make sure you spell it correctly"
+            )
+
             steamid = ""
 
     if steamid == "":
