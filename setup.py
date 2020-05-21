@@ -14,6 +14,9 @@ setuptools.setup(
     url="https://github.com/jaydenmilne/steamsync",
     packages=setuptools.find_packages('src'),
     package_dir={'': 'src'},
+    entry_points = {
+        'console_scripts': ['steamsync=steamsync:main']
+    },
     classifiers=[
         "Operating System :: Microsoft :: Windows",
         "Programming Language :: Python :: 3",
@@ -25,5 +28,5 @@ setuptools.setup(
         'vdf>=3,<4'
     ],
     scripts=["src/steamsync.py"],
-    python_requires='>=3.6',
+    python_requires='>=3.6'
 )
