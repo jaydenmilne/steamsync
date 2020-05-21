@@ -309,6 +309,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
     all_paths = set()
 
     for k, v in shortcuts["shortcuts"].items():
+        if "Exe" not in v:
+            print(f"Entry {v} in shortcuts.vdf has no `Exe` field! Is this a malformed entry?")
+            continue
         all_paths.add(v["Exe"])
 
     # the shortcuts "list" is actually a dict of "index": value

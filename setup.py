@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="steamsync",
-    version="0.2.1",
+    version="0.2.2",
     author="Jayden Milne",
     author_email="jaydenmilne@users.noreply.github.com",
     description="Tool to automatically add games from the Epic Games Launcher to Steam",
