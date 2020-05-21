@@ -310,7 +310,8 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
 
     for k, v in shortcuts["shortcuts"].items():
         if "Exe" not in v:
-            print(f"Entry {v} in shortcuts.vdf has no `Exe` field! Is this a malformed entry?")
+            print("Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?")
+            print(v)
             continue
         all_paths.add(v["Exe"])
 
