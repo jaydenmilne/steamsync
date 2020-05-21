@@ -344,7 +344,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
     print("➡   Restart Steam!")
 
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
     games = egs_collect_games(args.egs_manifests)
     print_games(games)
@@ -386,3 +386,6 @@ if __name__ == "__main__":
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously, args.use_paths)
     print("Done.")
+
+if __name__ == "__main__":
+    main()
