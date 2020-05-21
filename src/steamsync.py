@@ -195,10 +195,6 @@ def filter_games(games):
     return selected
 
 
-####################################################################################################
-# Steam
-
-
 def enumerate_steam_accounts(steam_path):
     """
     Returns a list of SteamAccounts that have signed into steam on this machine
@@ -347,9 +343,6 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
     print()
     print("➡   Restart Steam!")
 
-
-####################################################################################################
-# Main
 
 if __name__ == "__main__":
     args = parse_arguments()
