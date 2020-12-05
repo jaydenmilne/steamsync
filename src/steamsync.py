@@ -16,7 +16,9 @@ class GameDefinition:
     Steam itself needs to make a shortcut
     """
 
-    def __init__(self, executable_path, display_name, app_name, install_folder, launch_arguments):
+    def __init__(
+        self, executable_path, display_name, app_name, install_folder, launch_arguments
+    ):
         self.app_name = app_name
         self.executable_path = executable_path
         self.display_name = display_name
@@ -119,17 +121,23 @@ def egs_collect_games(egs_manifest_path):
                 print(f"\t- Skipping '{display_name}' since it isn't an application")
                 continue
             elif "games" not in item["AppCategories"]:
-                print(f"\t- Skipping '{display_name}' since it doesn't have the category 'games'")
+                print(
+                    f"\t- Skipping '{display_name}' since it doesn't have the category 'games'"
+                )
                 continue
 
             if "InstallLocation" not in item:
-                print(f"\t- Skipping '{display_name}' since it apparently doesn't have an 'InstallLocation'")
+                print(
+                    f"\t- Skipping '{display_name}' since it apparently doesn't have an 'InstallLocation'"
+                )
                 continue
 
             install_location = os.path.normpath(item["InstallLocation"])
 
             if "LaunchExecutable" not in item:
-                print(f"\t- Skipping '{display_name}' since it apparently doesn't have an executable")
+                print(
+                    f"\t- Skipping '{display_name}' since it apparently doesn't have an executable"
+                )
                 continue
 
             if "LaunchCommand" not in item:
@@ -146,7 +154,9 @@ def egs_collect_games(egs_manifest_path):
             # complete_path = os.path.join(install_location, launch_executable)
 
             executable_path = (
-                os.path.normpath(install_location) + os.path.sep + os.path.normpath(launch_executable)
+                os.path.normpath(install_location)
+                + os.path.sep
+                + os.path.normpath(launch_executable)
             )
 
             # found by looking creating a shortcut on the desktop in the EGL and inspecting it
@@ -160,7 +170,13 @@ def egs_collect_games(egs_manifest_path):
                 continue
 
             games.append(
-                GameDefinition(executable_path, display_name, app_name, install_location, launch_arguments)
+                GameDefinition(
+                    executable_path,
+                    display_name,
+                    app_name,
+                    install_location,
+                    launch_arguments,
+                )
             )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
@@ -175,11 +191,17 @@ def print_games(games):
     print(row_fmt.format("Num", "Game Name", "App ID", "Install Path"))
     print("=" * ((25 + 3) * 2 + 50 + 6))
     for i, game in enumerate(games, start=1):
-        print(row_fmt.format(i, game.display_name[:25], game.app_name, game.executable_path))
+        print(
+            row_fmt.format(
+                i, game.display_name[:25], game.app_name, game.executable_path
+            )
+        )
 
 
 def filter_games(games):
-    print("Which games do you want to install (blank = all, or comma seperated list of numbers from table)?")
+    print(
+        "Which games do you want to install (blank = all, or comma seperated list of numbers from table)?"
+    )
     selection = input(": ").strip()
     if selection == "":
         return games
@@ -247,7 +269,9 @@ def prompt_for_steam_account(accounts):
     for i, account in enumerate(accounts, start=1):
         print(row_fmt.format(i, account.steamid, account.username))
 
-    print(f"Leave empty for `{accounts[0].username}`, or input a steamid, or the Num from the list")
+    print(
+        f"Leave empty for `{accounts[0].username}`, or input a steamid, or the Num from the list"
+    )
     choice = input(": ").strip()
 
     if choice == "":
@@ -290,7 +314,9 @@ def to_shortcut(game, use_executable_path):
     }
 
 
-def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_executable_path):
+def add_games_to_shortcut_file(
+    steam_path, steamid, games, skip_backup, use_executable_path
+):
     if use_executable_path:
         print()
         print("⚠ ⚠ WARNING: ⚠ ⚠")
@@ -298,11 +324,15 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
         print("You may experience issues with online games (eg GTAV!)")
         print()
 
-    shortcut_file_path = os.path.join(steam_path, "userdata", steamid, "config", "shortcuts.vdf")
+    shortcut_file_path = os.path.join(
+        steam_path, "userdata", steamid, "config", "shortcuts.vdf"
+    )
 
     if not os.path.exists(shortcut_file_path):
         print(f"Could not find shortcuts file at `{shortcut_file_path}`")
-        print("Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting.")
+        print(
+            "Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
+        )
         exit(-2)
 
     # read in the shortcuts file
@@ -315,7 +345,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
 
     for k, v in shortcuts["shortcuts"].items():
         if "Exe" not in v:
-            print("Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?")
+            print(
+                "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
+            )
             print(v)
             continue
         all_paths.add(v["Exe"])
@@ -327,7 +359,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_exec
     for game in games:
         shortcut = game.executable_path if use_executable_path else game.uri
         if shortcut in all_paths:
-            print(f"Not creating shortcut for `{game.display_name}` since it already has one")
+            print(
+                f"Not creating shortcut for `{game.display_name}` since it already has one"
+            )
             continue
         last_index += 1
         shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_executable_path)
@@ -400,5 +434,7 @@ if __name__ == "__main__":
         steamid = prompt_for_steam_account(accounts)
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
-    add_games_to_shortcut_file(args.steam_path, steamid, games, args.live_dangerously, args.use_paths)
+    add_games_to_shortcut_file(
+        args.steam_path, steamid, games, args.live_dangerously, args.use_paths
+    )
     print("Done.")
