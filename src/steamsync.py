@@ -208,15 +208,20 @@ def enumerate_steam_accounts(steam_path):
         for child in childs:
             if not child.is_dir():
                 continue
+
             steamid = os.fsdecode(child.name)
 
             # we need to look inside this user's localconfig.vdf to figure out their
             # display name
 
+            localconfig_file = os.path.join(child.path, "config/localconfig.vdf")
+            if not os.path.exists(localconfig_file):
+                continue
+
             # here we just replace any malformed characters since we are only doing this to get the
             # display name
             with open(
-                os.path.join(child.path, "config/localconfig.vdf"), "r", encoding="utf-8", errors="replace"
+                localconfig_file, "r", encoding="utf-8", errors="replace"
             ) as localconfig:
                 cfg = vdf.load(localconfig)
                 username = cfg["UserLocalConfigStore"]["friends"]["PersonaName"]
