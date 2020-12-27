@@ -21,6 +21,7 @@ Requires > Python 3.6 and Windows
 $ pip install steamsync
 $ steamsync.py
 ```
+If you have issues with running `steamsync.py`, try running `python -m steamsync`
 
 ## Installation and Usage (for beginners)
 
