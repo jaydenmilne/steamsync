@@ -82,11 +82,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--use-paths",
+        "--use-uri",
         default=False,
         action="store_true",
-        help="Use the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`) instead of an Epic Games"
-        + "Launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`).",
+        help="Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) instead of the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`). Some games with online functionality (eg GTAV) require being launched through the EGS. Other games work better with Steam game streaming (eg Steam Link or Big Picture) using the path to the executable.",
         required=False,
     )
     return parser.parse_args()
@@ -285,16 +284,16 @@ def prompt_for_steam_account(accounts):
         exit(-1)
 
 
-def to_shortcut(game, use_executable_path):
+def to_shortcut(game, use_uri):
     """
     Turns the given GameDefinition into a shortcut dict, suitable to injecting
     into Steam's shortcuts.vdf
     """
 
-    if use_executable_path:
-        shortcut = game.executable_path
-    else:
+    if use_uri:
         shortcut = game.uri
+    else:
+        shortcut = game.executable_path
 
     return {
         "appname": game.display_name,
@@ -315,11 +314,17 @@ def to_shortcut(game, use_executable_path):
 
 
 def add_games_to_shortcut_file(
-    steam_path, steamid, games, skip_backup, use_executable_path
+    steam_path, steamid, games, skip_backup, use_uri
 ):
-    if use_executable_path:
+    if use_uri:
         print()
-        print("⚠ ⚠ WARNING: ⚠ ⚠")
+        print("⚠ ⚠ NOTICE: ⚠ ⚠")
+        print("Using a URI instead of executable path")
+        print("You may experience issues with game streaming")
+        print()
+    else:
+        print()
+        print("⚠ ⚠ NOTICE: ⚠ ⚠")
         print("Using the path to the executable instead of the Epic Games Launcher URI")
         print("You may experience issues with online games (eg GTAV!)")
         print()
@@ -355,16 +360,22 @@ def add_games_to_shortcut_file(
     # the shortcuts "list" is actually a dict of "index": value
     # find the last one so we can add on to the end
     added = 0
-    last_index = int(max(shortcuts["shortcuts"].keys()))
+
+    all_indexes = shortcuts["shortcuts"].keys()
+    if len(all_indexes) == 0:
+        last_index = 0
+    else:
+        last_index = max(all_indexes)
+
     for game in games:
-        shortcut = game.executable_path if use_executable_path else game.uri
+        shortcut = game.uri if use_uri else game.executable_path
         if shortcut in all_paths:
             print(
                 f"Not creating shortcut for `{game.display_name}` since it already has one"
             )
             continue
         last_index += 1
-        shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_executable_path)
+        shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_uri)
         added += 1
 
     print(f"Added {added} new games")
@@ -435,6 +446,6 @@ if __name__ == "__main__":
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(
-        args.steam_path, steamid, games, args.live_dangerously, args.use_paths
+        args.steam_path, steamid, games, args.live_dangerously, args.use_uri
     )
     print("Done.")
