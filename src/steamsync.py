@@ -375,7 +375,7 @@ def add_games_to_shortcut_file(
     if len(all_indexes) == 0:
         last_index = 0
     else:
-        last_index = max(all_indexes)
+        last_index = max(int(idx) for idx in all_indexes)
 
     for game in games:
         shortcut = game.uri if use_uri else game.executable_path
