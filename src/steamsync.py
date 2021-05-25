@@ -415,7 +415,7 @@ def add_games_to_shortcut_file(
 ####################################################################################################
 # Main
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
     games = egs_collect_games(args.egs_manifests)
     print_games(games)
@@ -430,7 +430,11 @@ if __name__ == "__main__":
 
     # Write shortcuts to steam!
     steamid = args.steamid
-    accounts = enumerate_steam_accounts(args.steam_path)
+    try:
+        accounts = enumerate_steam_accounts(args.steam_path)
+    except FileNotFoundError as e:
+        print(f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs.")
+        return -1
 
     if len(accounts) == 1 and steamid != "":
         print(
@@ -464,3 +468,7 @@ if __name__ == "__main__":
         args.steam_path, steamid, games, args.live_dangerously, args.use_uri
     )
     print("Done.")
+    return 0
+
+if __name__ == "__main__":
+    main()
