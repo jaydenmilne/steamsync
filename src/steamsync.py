@@ -199,7 +199,7 @@ def print_games(games):
 
 def filter_games(games):
     print(
-        "Which games do you want to install (blank = all, or comma seperated list of numbers from table)?"
+        "Which games do you want to install (blank = all, or comma separated list of numbers from table)?"
     )
     selection = input(": ").strip()
     if selection == "":
@@ -210,7 +210,13 @@ def filter_games(games):
     selected = list()
     for idx in selection:
         idx = idx.strip()
-        selected.append(games[int(idx) - 1])
+        try:
+            selected.append(games[int(idx) - 1])
+        except ValueError as e:
+            # Assuming: invalid literal for int() with base 10
+            print(f"Error: Expected number (1 for the first game) and not: '{idx}'")
+            return None
+
 
     print(f"Selected {len(selected)} games to install")
     return selected
@@ -277,11 +283,15 @@ def prompt_for_steam_account(accounts):
         return accounts[0].steamid
     elif choice in [account.steamid for account in accounts]:
         return choice
-    elif int(choice) <= len(accounts):
-        return accounts[int(choice) - 1].steamid
-    else:
-        print("You done messed up AARON")
-        exit(-1)
+
+    try:
+        idx = int(choice)
+        if idx <= len(accounts):
+            return accounts[idx - 1].steamid
+    except ValueError as e:
+        # Assuming: invalid literal for int() with base 10
+        print(f"Error: Expected number (1 for the first user) and not: '{choice}'")
+    return None
 
 
 def to_shortcut(game, use_uri):
@@ -411,7 +421,10 @@ if __name__ == "__main__":
     print_games(games)
 
     if not args.all:
-        games = filter_games(games)
+        picks = None
+        while not picks:
+            picks = filter_games(games)
+        games = picks
 
     # add more GameDefinitions to games as needed...
 
@@ -442,7 +455,9 @@ if __name__ == "__main__":
             steamid = ""
 
     if steamid == "":
-        steamid = prompt_for_steam_account(accounts)
+        steamid = None
+        while not steamid:
+            steamid = prompt_for_steam_account(accounts)
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(
