@@ -359,13 +359,16 @@ def add_games_to_shortcut_file(
     all_paths = set()
 
     for k, v in shortcuts["shortcuts"].items():
-        if "Exe" not in v:
+        exe_key = "Exe"
+        if exe_key not in v:
+            exe_key = "exe"
+        if exe_key not in v:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
             )
             print(v)
             continue
-        all_paths.add(v["Exe"])
+        all_paths.add(v[exe_key])
 
     # the shortcuts "list" is actually a dict of "index": value
     # find the last one so we can add on to the end
