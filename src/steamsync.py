@@ -148,15 +148,13 @@ def egs_collect_games(egs_manifest_path):
 
             launch_executable = os.path.normpath(item["LaunchExecutable"])
 
-            # This causes trouble for some games
-            # (D:\Epic Games\RiME + /RiME/SirenGame/Binaries/Win64/RiME.exe = D:/RiME/SirenGame/Binaries/Win64/RiME.exe ???)
-            # complete_path = os.path.join(install_location, launch_executable)
+            if launch_executable[0] in '/\\':
+                # Sanitize bad paths. RiME uses
+                # "/RiME/SirenGame/Binaries/Win64/RiME.exe", which looks
+                # absolute but it isn't.
+                launch_executable = launch_executable[1:]
 
-            executable_path = (
-                os.path.normpath(install_location)
-                + os.path.sep
-                + os.path.normpath(launch_executable)
-            )
+            executable_path = os.path.join(install_location, launch_executable)
 
             # found by looking creating a shortcut on the desktop in the EGL and inspecting it
             # using the URI instead of executable_path allows some games with online services
