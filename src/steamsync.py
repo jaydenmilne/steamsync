@@ -199,7 +199,7 @@ def print_games(games):
 
 def filter_games(games):
     print(
-        "Which games do you want to install (blank = all, or comma seperated list of numbers from table)?"
+        "Which games do you want to install (blank = all, or comma separated list of numbers from table)?"
     )
     selection = input(": ").strip()
     if selection == "":
@@ -210,7 +210,13 @@ def filter_games(games):
     selected = list()
     for idx in selection:
         idx = idx.strip()
-        selected.append(games[int(idx) - 1])
+        try:
+            selected.append(games[int(idx) - 1])
+        except ValueError as e:
+            # Assuming: invalid literal for int() with base 10
+            print(f"Error: Expected number (1 for the first game) and not: '{idx}'")
+            return None
+
 
     print(f"Selected {len(selected)} games to install")
     return selected
@@ -277,11 +283,15 @@ def prompt_for_steam_account(accounts):
         return accounts[0].steamid
     elif choice in [account.steamid for account in accounts]:
         return choice
-    elif int(choice) <= len(accounts):
-        return accounts[int(choice) - 1].steamid
-    else:
-        print("You done messed up AARON")
-        exit(-1)
+
+    try:
+        idx = int(choice)
+        if idx <= len(accounts):
+            return accounts[idx - 1].steamid
+    except ValueError as e:
+        # Assuming: invalid literal for int() with base 10
+        print(f"Error: Expected number (1 for the first user) and not: '{choice}'")
+    return None
 
 
 def to_shortcut(game, use_uri):
@@ -349,13 +359,16 @@ def add_games_to_shortcut_file(
     all_paths = set()
 
     for k, v in shortcuts["shortcuts"].items():
-        if "Exe" not in v:
+        exe_key = "Exe"
+        if exe_key not in v:
+            exe_key = "exe"
+        if exe_key not in v:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
             )
             print(v)
             continue
-        all_paths.add(v["Exe"])
+        all_paths.add(v[exe_key])
 
     # the shortcuts "list" is actually a dict of "index": value
     # find the last one so we can add on to the end
@@ -365,7 +378,7 @@ def add_games_to_shortcut_file(
     if len(all_indexes) == 0:
         last_index = 0
     else:
-        last_index = max(all_indexes)
+        last_index = max(int(idx) for idx in all_indexes)
 
     for game in games:
         shortcut = game.uri if use_uri else game.executable_path
@@ -405,19 +418,26 @@ def add_games_to_shortcut_file(
 ####################################################################################################
 # Main
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
     games = egs_collect_games(args.egs_manifests)
     print_games(games)
 
     if not args.all:
-        games = filter_games(games)
+        picks = None
+        while not picks:
+            picks = filter_games(games)
+        games = picks
 
     # add more GameDefinitions to games as needed...
 
     # Write shortcuts to steam!
     steamid = args.steamid
-    accounts = enumerate_steam_accounts(args.steam_path)
+    try:
+        accounts = enumerate_steam_accounts(args.steam_path)
+    except FileNotFoundError as e:
+        print(f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs.")
+        return -1
 
     if len(accounts) == 1 and steamid != "":
         print(
@@ -442,10 +462,16 @@ if __name__ == "__main__":
             steamid = ""
 
     if steamid == "":
-        steamid = prompt_for_steam_account(accounts)
+        steamid = None
+        while not steamid:
+            steamid = prompt_for_steam_account(accounts)
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(
         args.steam_path, steamid, games, args.live_dangerously, args.use_uri
     )
     print("Done.")
+    return 0
+
+if __name__ == "__main__":
+    main()
