@@ -148,7 +148,7 @@ def egs_collect_games(egs_manifest_path):
 
             launch_executable = os.path.normpath(item["LaunchExecutable"])
 
-            if launch_executable[0] in '/\\':
+            if launch_executable[0] in "/\\":
                 # Sanitize bad paths. RiME uses
                 # "/RiME/SirenGame/Binaries/Win64/RiME.exe", which looks
                 # absolute but it isn't.
@@ -214,7 +214,6 @@ def filter_games(games):
             # Assuming: invalid literal for int() with base 10
             print(f"Error: Expected number (1 for the first game) and not: '{idx}'")
             return None
-
 
     print(f"Selected {len(selected)} games to install")
     return selected
@@ -321,9 +320,7 @@ def to_shortcut(game, use_uri):
     }
 
 
-def add_games_to_shortcut_file(
-    steam_path, steamid, games, skip_backup, use_uri
-):
+def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri):
     if use_uri:
         print()
         print("⚠ ⚠ NOTICE: ⚠ ⚠")
@@ -416,6 +413,7 @@ def add_games_to_shortcut_file(
 ####################################################################################################
 # Main
 
+
 def main():
     args = parse_arguments()
     games = egs_collect_games(args.egs_manifests)
@@ -434,7 +432,9 @@ def main():
     try:
         accounts = enumerate_steam_accounts(args.steam_path)
     except FileNotFoundError as e:
-        print(f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs.")
+        print(
+            f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs."
+        )
         return -1
 
     if len(accounts) == 1 and steamid != "":
@@ -470,6 +470,7 @@ def main():
     )
     print("Done.")
     return 0
+
 
 if __name__ == "__main__":
     main()

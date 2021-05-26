@@ -36,8 +36,8 @@ If you have issues with running `steamsync.py`, try running `python -m steamsync
 
 ## Usage
 ```
-python .\steamsync.py -h
-usage: steamsync.py [-h] [--egs-manifests EGS_MANIFESTS] [--steam-path STEAM_PATH] [--all] [--live-dangerously] [--steamid STEAMID] [--use-paths]
+$ steamsync.py -h
+usage: steamsync.py [-h] [--egs-manifests EGS_MANIFESTS] [--steam-path STEAM_PATH] [--all] [--live-dangerously] [--steamid STEAMID] [--use-uri]
 
 Utility to import games from the Epic Games Store to your Steam library
 
@@ -50,8 +50,10 @@ optional arguments:
   --all                 Install all games found, do not prompt user to select which (default: False)
   --live-dangerously    Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak (default: False)
   --steamid STEAMID     SteamID or username to install the shortcuts to, only needed if >1 accounts on this machine (default: )
-  --use-paths           Use the path to the executable (eg `C:\Fortnite\Fortnite.exe`) instead of an Epic GamesLauncher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`). (default: False)  
-  ```
+  --use-uri             Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) instead of the path to the executable 
+                        (eg `C:\Fortnite\Fortnite.exe`). Some games with online functionality (eg GTAV) require being launched through the EGS. Other 
+                        games work better with Steam game streaming (eg Steam Link or Big Picture) using the path to the executable. (default: False)
+```
 
 ### FAQ
 #### Does this work on OSX?
