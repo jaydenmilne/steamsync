@@ -6,6 +6,8 @@ to allow you to use Remote Play and Steam Input with your EGS library.
 You can either use the app, described below, or the [CLI version](steamsync-library/README.md) 
 (available on PIP) if you are the ultimate hackerman.
 
+Eventually, the goal is to support other launchers.
+
 ## Using The App
 ### Installation
 Head over to [the latest release](https://github.com/jaydenmilne/steamsync/releases/latest) and 
@@ -69,3 +71,5 @@ steamsync will not make a `shortcuts.vdf` file for you if it isn't already there
 I welcome any PRs or suggestions on how to do better! The GUI is a mess, so if 
 anyone wants to tidy up the layout or code, be my guest. Contributions are
 licensed under the AGPLv3 license.
+
+One major feature I want to add is support for other launchers (Origin, Battle.NET, UPlay)
