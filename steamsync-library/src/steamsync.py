@@ -321,6 +321,19 @@ def to_shortcut(game, use_uri):
 
 
 def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri):
+    """Add the given games to the shortcut file
+
+    Args:
+        steam_path (string): location of the root of the steam installation
+        steamid (string): numeric steamid to add shortcuts to
+        games ([GameDefinition]): games to add
+        skip_backup (bool): if we shouldn't back up the file
+        use_uri ([type]): if we should use the EGS uri, or the path to the executable
+
+    Returns:
+        (([string], integer), string): First element of tuple is a tuple of an array of "results" to display and the number of games added, 
+                                         The second is an error text if something went wrong
+    """
     if use_uri:
         print()
         print("⚠ ⚠ NOTICE: ⚠ ⚠")
@@ -339,11 +352,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
     )
 
     if not os.path.exists(shortcut_file_path):
-        print(f"Could not find shortcuts file at `{shortcut_file_path}`")
-        print(
-            "Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
-        )
-        exit(-2)
+        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
+        print(message)
+        return None, message
 
     # read in the shortcuts file
     with open(shortcut_file_path, "rb") as sf:
@@ -375,12 +386,13 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
     else:
         last_index = max(int(idx) for idx in all_indexes)
 
+    game_results = []
     for game in games:
         shortcut = game.uri if use_uri else game.executable_path
         if shortcut in all_paths:
-            print(
-                f"Not creating shortcut for `{game.display_name}` since it already has one"
-            )
+            msg = f"{game.display_name}: Not creating shortcut since it already has one"
+            print(msg)
+            game_results.append(msg)
             continue
         last_index += 1
         shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_uri)
@@ -388,8 +400,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
 
     print(f"Added {added} new games")
     if added == 0:
-        print(f"No need to update `shortcuts.vdf`")
-        return
+        msg = f"No need to update `shortcuts.vdf` - nothing new to add"
+        print(msg)
+        return None, msg
 
     if skip_backup:
         print("Not backing up `shortcuts.vdf` since you enjoy danger")
@@ -408,6 +421,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
     print("Updated `shortcuts.vdf` successfully!")
     print()
     print("➡   Restart Steam!")
+    return (game_results, added), None
 
 
 ####################################################################################################

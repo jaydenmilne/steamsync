@@ -1,74 +1,50 @@
 # steamsync
-[![PyPI version](https://badge.fury.io/py/steamsync.svg)](https://badge.fury.io/py/steamsync) 
 
-Simple command line tool to automatically add games from the Epic Games Launcher
-to Steam.
+steamsync is a utility to import your Epic Games Store games into Steam as shortcuts,
+to allow you to use Remote Play and Steam Input with your EGS library.
 
-Makes playing all of those free EGS games in Big Picture Mode a lot easier. In my experience,
-when launching from Big Picture Mode, Steam Input works as expected (even in Fortnite!).
+You can either use the app, described below, or the [CLI version](steamsync-library/README.md) if you are
+the ultimate hackerman.
 
-steamsync will scan all of the Epic Games Store games installed on your computer and 
-add them to your Steam Library. If a shortcut with the same path already exists, it will
-skip it, so it's safe to import all of your games over and over.
+## Using The App
+### Installation
+Head over to [Releases](https://github.com/jaydenmilne/steamsync/releases) and 
+grab the latest `.exe`, and run it. There is no need to install anything.
 
-steamsync attempts to be simple. It does not attempt to fetch any banner art, it
- simply uses the executable's icon as the icon in steam. 
- 
-## Installation (brief)
-Requires > Python 3.6 and Windows
-
-```console
-$ pip install steamsync
-$ steamsync.py
-```
-If you have issues with running `steamsync.py`, try running `python -m steamsync`
-
-## Installation and Usage (for beginners)
-
-1. [Download Python 3.8](https://www.python.org/downloads/)
-2. Choose the latest version of Python 3.8, and get the "Windows x86-64 executable installer" option
-3. When installing Python, make sure to install pip and to *add Python to your PATH*
-4. Open Commmand Prompt (search Start Menu for cmd.exe)
-5. Type `pip install steamsync`, press enter. 
-6. Make sure Steam is not running!
-7. Type `steamsync.py`, press enter. The tool will walk you through everything else.
-   Press ctrl+c if you get scared and want to abort.
-
-## Usage
-```
-$ steamsync.py -h
-usage: steamsync.py [-h] [--egs-manifests EGS_MANIFESTS] [--steam-path STEAM_PATH] [--all] [--live-dangerously] [--steamid STEAMID] [--use-uri]
-
-Utility to import games from the Epic Games Store to your Steam library
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --egs-manifests EGS_MANIFESTS
-                        Path to search for Epic Games Store manifest files (default: C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests)
-  --steam-path STEAM_PATH
-                        Path to Steam installation (default: C:\Program Files (x86)\Steam)
-  --all                 Install all games found, do not prompt user to select which (default: False)
-  --live-dangerously    Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak (default: False)
-  --steamid STEAMID     SteamID or username to install the shortcuts to, only needed if >1 accounts on this machine (default: )
-  --use-uri             Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) instead of the path to the executable 
-                        (eg `C:\Fortnite\Fortnite.exe`). Some games with online functionality (eg GTAV) require being launched through the EGS. Other 
-                        games work better with Steam game streaming (eg Steam Link or Big Picture) using the path to the executable. (default: False)
-```
+### Usage
+1. Download & run the app
+2. Change the paths to your Steam installation and your Epic Games Store installation,
+   if needed.
+3. Press "Next"
+4. Select the Steam Account and path mode you want (if you're not sure, leave
+   the path mode at the default)
+5. Exit Steam
+6. Press "Add Shortcuts To Steam"
+7. ???
+8. Profit!
 
 ### FAQ
-#### Does this work on OSX?
-First of all, wow Mac gamers exist. Second of all, it *should* work if you supply
-`--egs-manifests` and `--steam-path`, maybe. Good luck
-
-#### What about Linux?
-If you get EGS working on Linux, you probably don't need this tool.
-
-#### It doesn't work!
-Open an issue on GitHub.
+#### It doesn't work! / I can't get it to work!
+[Open an issue on GitHub.](https://github.com/jaydenmilne/steamsync/issues)
 
 #### Steam crashed after opening my library the first time, but worked after that
-Weird, right? Mine did that too ¯\\_(ツ)_/¯. Maybe loading 52 shortcuts at once
-was too much for it.
+I think this has to do with importing all of the icons. Let Steam think and do 
+its thing, eventually it will start responding again.
+
+### What type of paths do I want?
+
+You can either use the path to the game 
+(eg `G:\Epic Games\RiME\RiME\SirenGame\Binaries\Win64\RiME.exe`) or use a URI 
+to launch the game (`com.epicgames.launcher://apps/Hydrangea?action=launch&silent=true`).
+
+Using the path is best when you want to do Remote Play and Steam Input.
+
+The URI is required for some online games (eg GTAV) to work. This interferes with
+Remote Play and Steam Input, however.
+
+### I can't launch GTAV!
+
+Use the "URI" option to import, see above.
 
 #### I want to go back to the way it was
 steamsync will backup your `shortcuts.vdf` file by default every time you run it.
@@ -81,16 +57,14 @@ and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam.
 Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. 
 steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
 
-#### Can this run automagically?
-Yes, yes it can! (you may need to adjust paths below)
+### Screenshots
+![screenshot-1](doc/img1.png)
+![screenshot-2](doc/img2.png)
 
-1. Open Task Scheduler (start + type "task...")
-2. Action Menu ➡ Create Basic Task
-3. Fill in a name and description
-4. Set the trigger you want to use (daily, log in, etc), Next
-5. Action = Start a Program
-6. Program/Script is `pythonw`
-7. Add arguments `C:\Users\{username}\AppData\Local\Programs\Python\Python38\Scripts\steamsync.py --all --steamid={steam id}`, Next
-8. Make sure to restart Steam once in a while
+It's beautiful, I know.
 
-TADA!
+## Contributing
+
+I welcome any PRs or suggestions on how to do better! The GUI is a mess, so if 
+anyone wants to tidy up the layout or code, be my guest. Contributions are
+licensed under the AGPLv3 license.
