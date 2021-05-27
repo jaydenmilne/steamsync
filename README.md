@@ -1,6 +1,6 @@
 # steamsync
 
-steamsync is a utility to import your Epic Games Store games into Steam as shortcuts,
+steamsync is an app to import your Epic Games Store games into Steam as shortcuts,
 to allow you to use Remote Play and Steam Input with your EGS library.
 
 You can either use the app, described below, or the [CLI version](steamsync-library/README.md) if you are
@@ -8,7 +8,7 @@ the ultimate hackerman.
 
 ## Using The App
 ### Installation
-Head over to [Releases](https://github.com/jaydenmilne/steamsync/releases) and 
+Head over to [the latest release](https://github.com/jaydenmilne/steamsync/releases/latest) and 
 grab the latest `.exe`, and run it. There is no need to install anything.
 
 ### Usage
@@ -22,6 +22,12 @@ grab the latest `.exe`, and run it. There is no need to install anything.
 6. Press "Add Shortcuts To Steam"
 7. ???
 8. Profit!
+
+### Screenshots
+![screenshot-1](doc/img1.png)
+![screenshot-2](doc/img2.png)
+
+It's beautiful, I know.
 
 ### FAQ
 #### It doesn't work! / I can't get it to work!
@@ -57,11 +63,6 @@ and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam.
 Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. 
 steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
 
-### Screenshots
-![screenshot-1](doc/img1.png)
-![screenshot-2](doc/img2.png)
-
-It's beautiful, I know.
 
 ## Contributing
 
