@@ -3,8 +3,8 @@
 steamsync is an app to import your Epic Games Store games into Steam as shortcuts,
 to allow you to use Remote Play and Steam Input with your EGS library.
 
-You can either use the app, described below, or the [CLI version](steamsync-library/README.md) if you are
-the ultimate hackerman.
+You can either use the app, described below, or the [CLI version](steamsync-library/README.md) 
+(available on PIP) if you are the ultimate hackerman.
 
 ## Using The App
 ### Installation
