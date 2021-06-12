@@ -9,22 +9,8 @@ import math
 
 import vdf
 
-
-class GameDefinition:
-    """
-    Data class to hold a game definition. Should be everything that the steamsync UI and that
-    Steam itself needs to make a shortcut
-    """
-
-    def __init__(
-        self, executable_path, display_name, app_name, install_folder, launch_arguments
-    ):
-        self.app_name = app_name
-        self.executable_path = executable_path
-        self.display_name = display_name
-        self.install_folder = install_folder
-        self.launch_arguments = launch_arguments
-        self.uri = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+from defs import GameDefinition
+from itch import itch_collect_games
 
 
 class SteamAccount:
@@ -39,7 +25,7 @@ class SteamAccount:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Utility to import games from the Epic Games Store to your Steam library",
+        description="Utility to import games from the Epic Games Store and itch.io to your Steam library",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -48,6 +34,13 @@ def parse_arguments():
         "--egs-manifests",
         default="C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests",
         help="Path to search for Epic Games Store manifest files",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--itch-library",
+        default=os.path.expandvars("$APPDATA/itch/apps"),
+        help="Path where the itch.io app installs games",
         required=False,
     )
 
@@ -173,6 +166,7 @@ def egs_collect_games(egs_manifest_path):
                     app_name,
                     install_location,
                     launch_arguments,
+                    defs.TAG_EPIC,
                 )
             )
 
@@ -297,7 +291,7 @@ def to_shortcut(game, use_uri):
     into Steam's shortcuts.vdf
     """
 
-    if use_uri:
+    if use_uri and game.uri:
         shortcut = game.uri
     else:
         shortcut = game.executable_path
@@ -316,7 +310,7 @@ def to_shortcut(game, use_uri):
         "Devkit": 0,
         "DevkitGameID": "",
         "LastPlayTime": 0,  # todo - is this right? if we really wanted we could parse this in from EGS manifest files...
-        "tags": {"0": "steamsync", "1": "epicgamesstore"},
+        "tags": {"0": "steamsync", "1": game.storetag},
     }
 
 
@@ -388,7 +382,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
 
     game_results = []
     for game in games:
-        shortcut = game.uri if use_uri else game.executable_path
+        shortcut = game.uri if use_uri and game.uri else game.executable_path
         if shortcut in all_paths:
             msg = f"{game.display_name}: Not creating shortcut since it already has one"
             print(msg)
@@ -430,7 +424,9 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
 
 def main():
     args = parse_arguments()
-    games = egs_collect_games(args.egs_manifests)
+    egs_games = egs_collect_games(args.egs_manifests)
+    itch_games = itch_collect_games(args.itch_library)
+    games = egs_games + itch_games
     print_games(games)
 
     if not args.all:
