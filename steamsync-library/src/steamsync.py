@@ -89,6 +89,15 @@ def parse_arguments():
         help="Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) instead of the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`). Some games with online functionality (eg GTAV) require being launched through the EGS. Other games work better with Steam game streaming (eg Steam Link or Big Picture) using the path to the executable.",
         required=False,
     )
+
+    parser.add_argument(
+        "--download-art",
+        default=False,
+        action="store_true",
+        help="Download steam grid art for games from steam's servers. Only downloads art that we haven't already downloaded.",
+        required=False,
+    )
+
     args = parser.parse_args()
     if not args.source:
         args.source = defs.TAGS
@@ -478,7 +487,21 @@ def main():
         while not steamid:
             steamid = prompt_for_steam_account(accounts)
 
-    print(f"Installing shortcuts for SteamID `{steamid}`")
+    user = next(user for user in accounts if user.steamid == steamid)
+
+    if args.download_art:
+        print("\nDownloading art...")
+        if args.replace_existing:
+            print(
+                f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
+            )
+        count = steamdb.download_art_multiple(
+            user, games, should_replace_existing=False
+        )
+        print(f"Downloaded art for {count} games.")
+        print()
+
+    print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
     add_games_to_shortcut_file(
         args.steam_path,
         steamid,
@@ -487,7 +510,8 @@ def main():
         args.use_uri,
         args.replace_existing,
     )
-    print("Done.")
+
+    print("\nDone.")
     return 0
 
 
