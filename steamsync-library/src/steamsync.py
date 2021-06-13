@@ -12,16 +12,7 @@ import vdf
 from itch import itch_collect_games
 from xbox import xbox_collect_games
 import defs
-
-
-class SteamAccount:
-    """
-    Data class to associate steamid and username
-    """
-
-    def __init__(self, steamid, username):
-        self.steamid = steamid
-        self.username = username
+import steameditor
 
 
 def parse_arguments():
@@ -242,37 +233,6 @@ def filter_games(games):
 # Steam
 
 
-def enumerate_steam_accounts(steam_path):
-    """
-    Returns a list of SteamAccounts that have signed into steam on this machine
-    """
-    accounts = list()
-    with os.scandir(os.path.join(steam_path, "userdata")) as childs:
-        for child in childs:
-            if not child.is_dir():
-                continue
-
-            steamid = os.fsdecode(child.name)
-
-            # we need to look inside this user's localconfig.vdf to figure out their
-            # display name
-
-            localconfig_file = os.path.join(child.path, "config/localconfig.vdf")
-            if not os.path.exists(localconfig_file):
-                continue
-
-            # here we just replace any malformed characters since we are only doing this to get the
-            # display name
-            with open(
-                localconfig_file, "r", encoding="utf-8", errors="replace"
-            ) as localconfig:
-                cfg = vdf.load(localconfig)
-                username = cfg["UserLocalConfigStore"]["friends"]["PersonaName"]
-                accounts.append(SteamAccount(steamid, username))
-
-    return accounts
-
-
 def prompt_for_steam_account(accounts):
     """
     Has the user choose a steam account from the list. If there is only one, returns
@@ -480,10 +440,14 @@ def main():
     # Write shortcuts to steam!
     steamid = args.steamid
     try:
-        accounts = enumerate_steam_accounts(args.steam_path)
+        steamdb = steameditor.SteamDatabase(
+            args.steam_path, os.path.expandvars("$LOCALAPPDATA/steamsync/cache")
+        )
+        accounts = steamdb.enumerate_steam_accounts()
     except FileNotFoundError as e:
         print(
-            f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs."
+            f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs.",
+            e,
         )
         return -1
 
