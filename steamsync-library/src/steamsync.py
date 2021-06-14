@@ -69,6 +69,14 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "--replace-existing",
+        default=False,
+        help="Instead of skipping existing shortcuts (ones with the same path), overwrite them with new data. Useful to repair broken shortcuts.",
+        required=False,
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--live-dangerously",
         default=False,
         help="Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak",
@@ -331,7 +339,9 @@ def to_shortcut(game, use_uri):
     }
 
 
-def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri):
+def add_games_to_shortcut_file(
+    steam_path, steamid, games, skip_backup, use_uri, replace_existing
+):
     """Add the given games to the shortcut file
 
     Args:
@@ -340,6 +350,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
         games ([GameDefinition]): games to add
         skip_backup (bool): if we shouldn't back up the file
         use_uri ([type]): if we should use the EGS uri, or the path to the executable
+        replace_existing (bool): if a shortcut already exists, clobber it with new data for that game
 
     Returns:
         (([string], integer), string): First element of tuple is a tuple of an array of "results" to display and the number of games added,
@@ -371,9 +382,11 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
     with open(shortcut_file_path, "rb") as sf:
         shortcuts = vdf.binary_load(sf)
 
-    # Make a set that contains the path of every shortcut installed. If a path is already in the
-    # shortuts file, we won't add another one (ie the path is what makes a shortcut unique)
-    all_paths = set()
+    # Make a lookup of the path of every shortcut installed to their index in
+    # the shortcuts file. If a path is already in the shortcuts file, we won't
+    # add another one (ie the path is what makes a shortcut unique) or if we
+    # want to force updating, we can clobber the existing entry.
+    path_to_index = {}
 
     for k, v in shortcuts["shortcuts"].items():
         exe_key = "Exe"
@@ -385,7 +398,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
             )
             print(v)
             continue
-        all_paths.add(v[exe_key])
+        path_to_index[v[exe_key]] = k
 
     # the shortcuts "list" is actually a dict of "index": value
     # find the last one so we can add on to the end
@@ -400,10 +413,15 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
     game_results = []
     for game in games:
         shortcut = game.uri if use_uri and game.uri else game.executable_path
-        if shortcut in all_paths:
-            msg = f"{game.display_name}: Not creating shortcut since it already has one"
-            print(msg)
-            game_results.append(msg)
+        i = path_to_index.get(shortcut, None)
+        if i:
+            if replace_existing:
+                shortcuts["shortcuts"][i] = to_shortcut(game, use_uri)
+                added += 1
+            else:
+                msg = f"{game.display_name}: Not creating shortcut since it already has one"
+                print(msg)
+                game_results.append(msg)
             continue
         last_index += 1
         shortcuts["shortcuts"][str(last_index)] = to_shortcut(game, use_uri)
@@ -411,7 +429,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
 
     print(f"Added {added} new games")
     if added == 0:
-        msg = f"No need to update `shortcuts.vdf` - nothing new to add"
+        msg = "No need to update `shortcuts.vdf` - nothing new to add"
         print(msg)
         return None, msg
 
@@ -498,7 +516,12 @@ def main():
 
     print(f"Installing shortcuts for SteamID `{steamid}`")
     add_games_to_shortcut_file(
-        args.steam_path, steamid, games, args.live_dangerously, args.use_uri
+        args.steam_path,
+        steamid,
+        games,
+        args.live_dangerously,
+        args.use_uri,
+        args.replace_existing,
     )
     print("Done.")
     return 0
