@@ -186,6 +186,7 @@ def egs_collect_games(egs_manifest_path):
                     app_name,
                     install_location,
                     launch_arguments,
+                    None,
                     defs.TAG_EPIC,
                 )
             )

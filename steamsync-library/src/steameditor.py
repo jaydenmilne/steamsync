@@ -145,6 +145,13 @@ class SteamDatabase:
         if not dest.is_file():
             shutil.copy(art_fname, dest)
 
+    def _is_supported_image(self, fname):
+        """Does steam support using this type of image for grid art.
+
+        _is_supported_image(str) -> bool
+        """
+        return not fname.endswith(".gif")
+
     def download_art(self, user, game, should_replace_existing):
         targets = self._get_grid_art_destinations(game, user)
         targets["boxart"].parent.mkdir(exist_ok=True, parents=True)
@@ -165,6 +172,31 @@ class SteamDatabase:
                     found_art += 1
                 else:
                     logs.append(msg)
+        else:
+            logs.append("Appid not found.")
+
+        if (
+            found_art < expected_art
+            and game.art_url
+            and self._is_supported_image(game.art_url)
+        ):
+            # Maybe not on steam. Fall back to other art.
+            dest_fname = targets["logo"]
+            did_download, fname, msg = self._try_download_image(
+                game.art_url, dest_fname, should_replace_existing
+            )
+            downloaded_art |= did_download
+            if fname:
+                found_art += 3
+                # Use the logo art for box art. Looks better than grey box.
+                self._try_copy_art_to(fname, targets["boxart"])
+                # Logo is closest to big picture's banner format.
+                self._try_copy_art_to(fname, targets["10foot"])
+                logs.append("Using fallback art. No hero available.")
+            else:
+                logs.append(msg)
+        else:
+            logs.append("No non-steam art found.")
 
         if found_art < expected_art:
             print(f"Found {found_art}/{expected_art} art for '{game.display_name}'")
