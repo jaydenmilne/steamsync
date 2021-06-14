@@ -7,12 +7,17 @@ from pathlib import Path
 import binascii
 import json
 import os
+import re
 import shutil
 
 import requests
 import vdf
 
 k_applist_fname = "applist.json"
+re_remove_hyphen = re.compile(r"- ")
+re_remove_subtitle = re.compile(r"\s*:.*")
+re_remove_braces = re.compile(r"\s*\(.*\)")
+re_remove_pc = re.compile(r" (pc|for windows)$")
 
 
 class SteamAccount:
@@ -76,6 +81,19 @@ class SteamDatabase:
 
         return accounts
 
+    def _make_gamename_comparable(self, name):
+        """Convert a game name into something easier to compare. Does minimal
+        transformations to ensure the best matches, but removes irrelevant
+        details.
+
+        _make_gamename_comparable(str) -> str
+        """
+        # Always remove hypen because it adds extra uncertainty.
+        name = re_remove_hyphen.sub("", name)
+        # Ignore 'the' vs 'The' differences (fixes Into The Breach)
+        name = name.lower()
+        return name
+
     def _load_app_list(self):
         """Load or download the app list.
 
@@ -83,7 +101,7 @@ class SteamDatabase:
         """
         data = None
         now = datetime.utcnow()
-        current_version = 1
+        current_version = 2
 
         applist_file = self._cache_folder / k_applist_fname
         if applist_file.is_file():
@@ -105,11 +123,24 @@ class SteamDatabase:
                 "http://api.steampowered.com/ISteamApps/GetAppList/v2"
             )
             apps = response.json()["applist"]["apps"]
-            name_to_id = {g["name"]: g["appid"] for g in apps}
+            name_to_id = {}
+            stripped_to_id = {}
+            for g in apps:
+                name = self._make_gamename_comparable(g["name"])
+                name_to_id[name] = g["appid"]
+                # Include a stripped set for better name guessing.
+                stripped = re_remove_subtitle.sub("", name, 1)
+                if (
+                    stripped not in name_to_id
+                    and "Trial" not in name
+                    and "Demo" not in name
+                ):
+                    stripped_to_id[stripped] = g["appid"]
             data = {
                 "version": current_version,
                 "download_timestamp": now.isoformat(),
                 "name_to_id": name_to_id,
+                "stripped_to_id": stripped_to_id,
             }
             applist_file.parent.mkdir(parents=True, exist_ok=True)
             with applist_file.open("w", encoding="utf-8") as file:
@@ -118,9 +149,40 @@ class SteamDatabase:
         return data
 
     def guess_appid(self, name):
+        """Guess the steam appid for a given game name.
+
+        guess_appid(str) -> str
+        """
         name_to_id = self._apps["name_to_id"]
+        stripped_to_id = self._apps["stripped_to_id"]
+        name = self._make_gamename_comparable(name)
         appid = name_to_id.get(name)
-        # Don't bother trying to be smart. Might return None.
+        if not appid:
+            # For: "Control" -> "Control Ultimate Edition"
+            for suffix in [" ultimate edition", " digital edition", " steam edition"]:
+                long_name = name + suffix
+                appid = name_to_id.get(long_name)
+                if appid:
+                    break
+        if not appid:
+            # For: "Yakuza Kiwami (PC)" -> "Yakuza Kiwami"
+            stripped = re_remove_braces.sub("", name, 1)
+            appid = name_to_id.get(stripped)
+        if not appid:
+            # For: "Ghost of a Tale PC" -> "Ghost of a Tale"
+            # For: "Genesis Noir for Windows" -> "Genesis Noir"
+            stripped = re_remove_pc.sub("", name, 1)
+            appid = name_to_id.get(stripped)
+        if not appid:
+            # For: "Grand Theft Auto V: Premium Edition" -> "Grand Theft Auto V"
+            stripped = re_remove_subtitle.sub("", name, 1)
+            appid = stripped_to_id.get(stripped)
+        if not appid:
+            # For: "Rocket League®" -> "Rocket League"
+            stripped = name.encode("ascii", "ignore")
+            name = stripped.decode().strip()
+            appid = name_to_id.get(name)
+        # Might return None.
         return appid
 
     def download_art_multiple(self, user, games, should_replace_existing):
@@ -276,7 +338,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "Overland"
+    game_name = "Genesis Noir for Windows"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
