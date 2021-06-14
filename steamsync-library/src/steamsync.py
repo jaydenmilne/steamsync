@@ -94,13 +94,23 @@ def parse_arguments():
         "--download-art",
         default=False,
         action="store_true",
-        help="Download steam grid art for games from steam's servers. Only downloads art that we haven't already downloaded.",
+        help="Download Steam grid and Big Picture art from steam's servers for games we're adding. Only downloads art that we haven't already downloaded.",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--download-art-all-shortcuts",
+        default=False,
+        action="store_true",
+        help="Download Steam grid and Big Picture art for all non-steam game shortcuts. Only downloads art that we haven't already downloaded. Implies --download-art",
         required=False,
     )
 
     args = parser.parse_args()
     if not args.source:
         args.source = defs.TAGS
+    if args.download_art_all_shortcuts:
+        args.download_art = True
     return args
 
 
@@ -310,17 +320,24 @@ def to_shortcut(game, use_uri):
 
 
 def add_games_to_shortcut_file(
-    steam_path, steamid, games, skip_backup, use_uri, replace_existing
+    steamdb,
+    user,
+    games,
+    skip_backup,
+    use_uri,
+    replace_existing,
+    download_art_unsupported,
 ):
     """Add the given games to the shortcut file
 
     Args:
-        steam_path (string): location of the root of the steam installation
-        steamid (string): numeric steamid to add shortcuts to
+        steamdb (SteamDatabase): steam wrapper object
+        user (SteamAccount): user to add shortcuts to
         games ([GameDefinition]): games to add
         skip_backup (bool): if we shouldn't back up the file
-        use_uri ([type]): if we should use the EGS uri, or the path to the executable
+        use_uri (bool): if we should use the EGS uri, or the path to the executable
         replace_existing (bool): if a shortcut already exists, clobber it with new data for that game
+        download_art_unsupported (bool): download art for unsupported games
 
     Returns:
         (([string], integer), string): First element of tuple is a tuple of an array of "results" to display and the number of games added,
@@ -340,7 +357,7 @@ def add_games_to_shortcut_file(
         print()
 
     shortcut_file_path = os.path.join(
-        steam_path, "userdata", steamid, "config", "shortcuts.vdf"
+        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
     )
 
     if not os.path.exists(shortcut_file_path):
@@ -358,17 +375,41 @@ def add_games_to_shortcut_file(
     # want to force updating, we can clobber the existing entry.
     path_to_index = {}
 
+    art_downloads = 0
+    if download_art_unsupported:
+        print("Downloading art for existing shortcuts...")
+
+    supported_games = {game.executable_path: game for game in games}
     for k, v in shortcuts["shortcuts"].items():
-        exe_key = "Exe"
-        if exe_key not in v:
-            exe_key = "exe"
-        if exe_key not in v:
+        exe = v.get("Exe")
+        if not exe:
+            exe = v.get("exe")
+        if not exe:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
             )
             print(v)
             continue
-        path_to_index[v[exe_key]] = k
+        path_to_index[exe] = k
+        appname = v.get("appname")
+        if download_art_unsupported and exe not in supported_games:
+            # Create a temp definition to specify info required to download.
+            game = defs.GameDefinition(
+                exe,
+                appname,
+                "no-appid",  # v["appid"] doesn't already exist and don't do anything with it anyway
+                str(Path(exe).parent),
+                "",
+                None,
+                "ignore tag",
+            )
+            success = steamdb.download_art(user, game, should_replace_existing=False)
+            if success:
+                art_downloads += 1
+
+    if download_art_unsupported:
+        print(f"Downloaded new art for {art_downloads} games.")
+        print()
 
     # the shortcuts "list" is actually a dict of "index": value
     # find the last one so we can add on to the end
@@ -439,6 +480,8 @@ def main():
     print()
     print_games(games)
 
+    all_games = games
+
     if not args.all:
         picks = None
         while not picks:
@@ -491,25 +534,34 @@ def main():
     user = next(user for user in accounts if user.steamid == steamid)
 
     if args.download_art:
-        print("\nDownloading art...")
+        if args.download_art_all_shortcuts:
+            get_art_for_games = all_games
+            print("\nDownloading art for all detected games...")
+        else:
+            get_art_for_games = games
+            print("\nDownloading art for selected games...")
+
         if args.replace_existing:
+            # We don't have an argument for replacing art and replacing
+            # shortcuts is pretty different, so explain the better path.
             print(
                 f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
             )
         count = steamdb.download_art_multiple(
-            user, games, should_replace_existing=False
+            user, get_art_for_games, should_replace_existing=False
         )
-        print(f"Downloaded art for {count} games.")
+        print(f"Downloaded new art for {count} games.")
         print()
 
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
     add_games_to_shortcut_file(
-        args.steam_path,
-        steamid,
+        steamdb,
+        user,
         games,
         args.live_dangerously,
         args.use_uri,
         args.replace_existing,
+        args.download_art_all_shortcuts,
     )
 
     print("\nDone.")
