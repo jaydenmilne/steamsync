@@ -2,9 +2,11 @@
 
 TAG_EPIC = "epicstore"
 TAG_ITCH = "itchio"
+TAG_XBOX = "xbox"
 TAGS = [
     TAG_EPIC,
     TAG_ITCH,
+    TAG_XBOX,
 ]
 
 
@@ -25,6 +27,7 @@ class GameDefinition:
     ):
         self.app_name = app_name
         self.executable_path = executable_path
+        self.icon = executable_path
         self.display_name = display_name
         self.install_folder = install_folder
         self.launch_arguments = launch_arguments
