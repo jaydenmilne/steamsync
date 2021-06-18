@@ -7,6 +7,7 @@ from pathlib import Path
 import binascii
 import json
 import os
+import os
 import re
 import shutil
 
@@ -205,7 +206,13 @@ class SteamDatabase:
         """
         dest = dest.with_suffix(art_fname.suffix)
         if not dest.is_file():
-            shutil.copy(art_fname, dest)
+            try:
+                # Steam works with symlinks if you can create them. Saves disk
+                # space.
+                os.symlink(art_fname, dest)
+            except OSError:
+                # Can only symlink as root. Copy instead.
+                shutil.copy(art_fname, dest)
 
     def _is_supported_image(self, fname):
         """Does steam support using this type of image for grid art.
