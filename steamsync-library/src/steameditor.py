@@ -158,6 +158,11 @@ class SteamDatabase:
         stripped_to_id = self._apps["stripped_to_id"]
         name = self._make_gamename_comparable(name)
         appid = name_to_id.get(name)
+
+        if appid == 3970:
+            # Assume Prey 2017 over Prey 2006 since the newer one has more art.
+            appid = 480490
+
         if not appid:
             # For: "Control" -> "Control Ultimate Edition"
             for suffix in [" ultimate edition", " digital edition", " steam edition"]:
