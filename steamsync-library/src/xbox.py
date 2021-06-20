@@ -89,7 +89,8 @@ def xbox_collect_games():
         game_name = app["PrettyName"]
         install = Path(app["InstallLocation"])
         # Can't filter on Kind='Game' because older games like Prey 2017 are
-        # Kind='App'. Most games have a MicrosoftGame.config.
+        # Kind='App' and some put their name there! Most games have a
+        # MicrosoftGame.config.
         config = install / "MicrosoftGame.config"
         if config.is_file():
             exe_name, game_name = _get_details_from_config(config)
