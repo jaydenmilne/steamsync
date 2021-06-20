@@ -28,7 +28,7 @@ foreach ($app in $targets)
                 PrettyName = $name
                 Icon = $icon
                 InstallLocation = $app.InstallLocation
-                #~ Aumid = $app.PackageFamilyName + "!" + $id
+                Aumid = $app.PackageFamilyName + "!" + $id
             };
         }
     }

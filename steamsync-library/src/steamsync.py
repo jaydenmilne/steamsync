@@ -191,7 +191,7 @@ def print_games(games):
     games = list of GameDefinition
     """
     row_fmt = "{: >3} | {: <25} | {: <10} | {: <45} | {: <25}"
-    print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Install Path"))
+    print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Executable"))
     print("=" * (3 + 25 + 10 + 45 + 25))
     for i, game in enumerate(games, start=1):
         print(
@@ -200,7 +200,7 @@ def print_games(games):
                 game.display_name[:25],
                 game.storetag,
                 game.app_name,
-                game.executable_path,
+                f"{game.executable_path} {game.launch_arguments}",
             )
         )
 
