@@ -9,8 +9,8 @@ import math
 
 import vdf
 
-from defs import GameDefinition
 from itch import itch_collect_games
+import defs
 
 
 class SteamAccount:
@@ -160,7 +160,7 @@ def egs_collect_games(egs_manifest_path):
                 continue
 
             games.append(
-                GameDefinition(
+                defs.GameDefinition(
                     executable_path,
                     display_name,
                     app_name,
@@ -178,13 +178,17 @@ def print_games(games):
     """
     games = list of GameDefinition
     """
-    row_fmt = "{: >3} | {: <25} | {: <32} | {: <25}"
-    print(row_fmt.format("Num", "Game Name", "App ID", "Install Path"))
-    print("=" * ((25 + 3) * 2 + 50 + 6))
+    row_fmt = "{: >3} | {: <25} | {: <10} | {: <32} | {: <25}"
+    print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Install Path"))
+    print("=" * ((25 + 3) * 2 + 10 + 50 + 6))
     for i, game in enumerate(games, start=1):
         print(
             row_fmt.format(
-                i, game.display_name[:25], game.app_name, game.executable_path
+                i,
+                game.display_name[:25],
+                game.storetag,
+                game.app_name,
+                game.executable_path,
             )
         )
 
@@ -325,7 +329,7 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
         use_uri ([type]): if we should use the EGS uri, or the path to the executable
 
     Returns:
-        (([string], integer), string): First element of tuple is a tuple of an array of "results" to display and the number of games added, 
+        (([string], integer), string): First element of tuple is a tuple of an array of "results" to display and the number of games added,
                                          The second is an error text if something went wrong
     """
     if use_uri:

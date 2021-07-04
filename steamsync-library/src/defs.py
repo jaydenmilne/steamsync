@@ -1,6 +1,6 @@
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-TAG_EPIC = "epicgamesstore"
+TAG_EPIC = "epicstore"
 TAG_ITCH = "itchio"
 
 
