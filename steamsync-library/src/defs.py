@@ -2,6 +2,10 @@
 
 TAG_EPIC = "epicstore"
 TAG_ITCH = "itchio"
+TAGS = [
+    TAG_EPIC,
+    TAG_ITCH,
+]
 
 
 class GameDefinition:

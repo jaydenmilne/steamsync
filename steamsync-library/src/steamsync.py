@@ -29,6 +29,14 @@ def parse_arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument(
+        "--source",
+        action="append",
+        choices=defs.TAGS,
+        help="Storefronts with games to add to Steam. If unspecified, uses all sources.",
+        required=False,
+    )
+
     # TODO: make this path to egl root and not to manifests
     parser.add_argument(
         "--egs-manifests",
@@ -81,7 +89,10 @@ def parse_arguments():
         help="Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) instead of the path to the executable (eg `C:\\Fortnite\\Fortnite.exe`). Some games with online functionality (eg GTAV) require being launched through the EGS. Other games work better with Steam game streaming (eg Steam Link or Big Picture) using the path to the executable.",
         required=False,
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.source:
+        args.source = defs.TAGS
+    return args
 
 
 def egs_collect_games(egs_manifest_path):
@@ -428,9 +439,11 @@ def add_games_to_shortcut_file(steam_path, steamid, games, skip_backup, use_uri)
 
 def main():
     args = parse_arguments()
-    egs_games = egs_collect_games(args.egs_manifests)
-    itch_games = itch_collect_games(args.itch_library)
-    games = egs_games + itch_games
+    games = []
+    if defs.TAG_EPIC in args.source:
+        games += egs_collect_games(args.egs_manifests)
+    if defs.TAG_ITCH in args.source:
+        games += itch_collect_games(args.itch_library)
     print_games(games)
 
     if not args.all:
