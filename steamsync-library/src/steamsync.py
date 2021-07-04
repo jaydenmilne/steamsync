@@ -100,7 +100,7 @@ def egs_collect_games(egs_manifest_path):
     """
     Returns an array of GameDefinitions of all the installed EGS games
     """
-    print(f"Scanning EGS manifest store ({egs_manifest_path})...")
+    print(f"\nScanning EGS manifest store ({egs_manifest_path})...")
     # loop over every .item fiile
     pathlist = Path(egs_manifest_path).glob("*.item")
     games = list()
@@ -447,6 +447,7 @@ def main():
         games += itch_collect_games(args.itch_library)
     if defs.TAG_XBOX in args.source:
         games += xbox_collect_games()
+    print()
     print_games(games)
 
     if not args.all:

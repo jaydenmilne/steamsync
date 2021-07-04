@@ -29,7 +29,7 @@ def xbox_collect_games():
     """
     games = []
 
-    print("Scanning Xbox library...")
+    print("\nScanning Xbox library...")
     # Run string instead of scriptfile to circumvent powershell ExecutionPolicy
     # ("cannot be loaded because running scripts is disabled on this system").
     script = Path(__file__).resolve().parent / "list_xbox_games.ps1"

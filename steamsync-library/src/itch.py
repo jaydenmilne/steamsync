@@ -83,7 +83,7 @@ def itch_collect_games(path_to_library):
 
     itch_collect_games(str) -> list(defs.GameDefinition)
     """
-    print(f"Scanning itch library folder ({path_to_library})...")
+    print(f"\nScanning itch library folder ({path_to_library})...")
     root = Path(path_to_library)
     games = []
     for receipt in root.glob("*/.itch/receipt.json.gz"):
