@@ -190,9 +190,9 @@ def print_games(games):
     """
     games = list of GameDefinition
     """
-    row_fmt = "{: >3} | {: <25} | {: <10} | {: <32} | {: <25}"
+    row_fmt = "{: >3} | {: <25} | {: <10} | {: <45} | {: <25}"
     print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Install Path"))
-    print("=" * ((25 + 3) * 2 + 10 + 50 + 6))
+    print("=" * (3 + 25 + 10 + 45 + 25))
     for i, game in enumerate(games, start=1):
         print(
             row_fmt.format(
