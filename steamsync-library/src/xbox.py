@@ -10,16 +10,20 @@ import subprocess
 import defs
 
 
-def _get_exe_from_config(path_to_config):
+def _get_details_from_config(path_to_config):
     """Get the exe file name (not full path) to launch from the config.
 
-    _get_exe_from_config(Path) -> str
+    _get_details_from_config(Path) -> str,str
     """
     with path_to_config.open("r", encoding="utf-8") as f:
         doc = minidom.parse(f)
+    # "Tetris® Effect: Connected" instead of "Tetrisr Effect: Connected" from list_xbox_games.
+    display_name = doc.getElementsByTagName("ShellVisuals")[0].getAttribute(
+        "DefaultDisplayName"
+    )
     exes = doc.getElementsByTagName("Executable")
     for exe in exes:
-        return exe.getAttribute("Name")
+        return exe.getAttribute("Name"), display_name
 
 
 def xbox_collect_games():
@@ -46,7 +50,9 @@ def xbox_collect_games():
         config = install / "MicrosoftGame.config"
         # Hopefully filtering by MicrosoftGame excludes non-games. Older games
         # like Prey 2017 are Kind='App' instead of 'Game'.
-        if not config.is_file():
+        if config.is_file():
+            exe_name, game_name = _get_details_from_config(config)
+        else:
             if app["Kind"] == "Game":
                 print(
                     f"Warning: Failed to find MicrosoftGame.config file for game '{game_name}'. Expected: {config}"
