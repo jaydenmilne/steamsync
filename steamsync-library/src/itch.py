@@ -139,6 +139,7 @@ def itch_collect_games(path_to_library):
             )
 
     print(f"Collected {len(games)} games from the itch library")
+    games.sort()
     return games
 
 

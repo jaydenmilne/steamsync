@@ -154,6 +154,7 @@ def xbox_collect_games():
         games.append(game_def)
 
     print(f"Collected {len(games)} games from the Xbox library")
+    games.sort()
     return games
 
 

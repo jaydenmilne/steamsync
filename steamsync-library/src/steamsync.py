@@ -183,6 +183,7 @@ def egs_collect_games(egs_manifest_path):
             )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
+    games.sort()
     return games
 
 

@@ -38,3 +38,7 @@ class GameDefinition:
         else:
             self.uri = None
         self.storetag = storetag
+
+    def __lt__(self, other):
+        # Sort by display_name
+        return self.display_name < other.display_name
