@@ -7,7 +7,7 @@ from pathlib import Path
 import binascii
 import json
 import os
-import os
+import unicodedata
 import re
 import shutil
 
@@ -19,6 +19,24 @@ re_remove_hyphen = re.compile(r"- ")
 re_remove_subtitle = re.compile(r"\s*:.*")
 re_remove_braces = re.compile(r"\s*\(.*\)")
 re_remove_pc = re.compile(r" (pc|for windows)$")
+
+
+def _strip_nonascii(text):
+    """Remove non-ascii character to make for easier comparisons.
+
+    _strip_nonascii(str) -> str
+    """
+    stripped = text.encode("ascii", "ignore")
+    return stripped.decode().strip()
+
+
+def _remove_accents(text):
+    """Takes a unicode string and omits characters that would combine with the
+    previous one (diacritics).
+    See https://stackoverflow.com/a/517974/79125
+    """
+    nfkd_form = unicodedata.normalize("NFKD", text)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
 
 class SteamAccount:
@@ -127,16 +145,21 @@ class SteamDatabase:
             name_to_id = {}
             stripped_to_id = {}
             for g in apps:
-                name = self._make_gamename_comparable(g["name"])
+                name = g["name"]
+                if not name:
+                    continue
+                name = self._make_gamename_comparable(name)
                 name_to_id[name] = g["appid"]
-                # Include a stripped set for better name guessing.
-                stripped = re_remove_subtitle.sub("", name, 1)
-                if (
-                    stripped not in name_to_id
-                    and "Trial" not in name
-                    and "Demo" not in name
-                ):
-                    stripped_to_id[stripped] = g["appid"]
+                if " trial" not in name and " demo" not in name:
+                    # Include a stripped set for better name guessing.
+                    # Without accents (for ABZU):
+                    stripped = _remove_accents(name)
+                    if stripped not in name_to_id:
+                        stripped_to_id[stripped] = g["appid"]
+                    # Without subtitle:
+                    stripped = re_remove_subtitle.sub("", name, 1)
+                    if stripped not in name_to_id:
+                        stripped_to_id[stripped] = g["appid"]
             data = {
                 "version": current_version,
                 "download_timestamp": now.isoformat(),
@@ -184,9 +207,14 @@ class SteamDatabase:
             stripped = re_remove_subtitle.sub("", name, 1)
             appid = stripped_to_id.get(stripped)
         if not appid:
+            # For: "ABZÛ" -> "ABZU"
+            name = _remove_accents(name)
+            appid = name_to_id.get(name)
+            if not appid:
+                appid = stripped_to_id.get(name)
+        if not appid:
             # For: "Rocket League®" -> "Rocket League"
-            stripped = name.encode("ascii", "ignore")
-            name = stripped.decode().strip()
+            name = _strip_nonascii(name)
             appid = name_to_id.get(name)
         # Might return None.
         return appid
@@ -350,7 +378,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "Genesis Noir for Windows"
+    game_name = "ABZU"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
