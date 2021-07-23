@@ -125,6 +125,7 @@ def itch_collect_games(path_to_library):
             f"{game_root_dir.name}{label}",
             working_dir,
             args,
+            g["coverUrl"],
             defs.TAG_ITCH,
         )
         games.append(game_def)

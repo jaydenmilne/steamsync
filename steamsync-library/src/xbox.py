@@ -141,6 +141,7 @@ def xbox_collect_games():
             app["Appid"],
             str(exe.parent),
             args,
+            None,
             defs.TAG_XBOX,
         )
         icon = Path(app["Icon"])

@@ -23,6 +23,7 @@ class GameDefinition:
         app_name,
         install_folder,
         launch_arguments,
+        art_url,
         storetag,
     ):
         self.app_name = app_name
@@ -37,6 +38,7 @@ class GameDefinition:
             )
         else:
             self.uri = None
+        self.art_url = art_url
         self.storetag = storetag
 
     def __lt__(self, other):
