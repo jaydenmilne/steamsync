@@ -3,6 +3,7 @@
 
 import os
 
+
 def is_executable_game(game_path):
     """Is the input path a real file that we have access to?
 
@@ -12,4 +13,3 @@ def is_executable_game(game_path):
         return game_path.is_file() and os.access(game_path, os.R_OK)
     except OSError:
         return False
-

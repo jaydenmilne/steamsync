@@ -10,6 +10,7 @@ import math
 import vdf
 
 from itch import itch_collect_games
+from xbox import xbox_collect_games
 import defs
 
 
@@ -25,7 +26,7 @@ class SteamAccount:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Utility to import games from the Epic Games Store and itch.io to your Steam library",
+        description="Utility to import games from the Epic Games Store, Microsoft Store (Xbox for Windows), and itch.io to your Steam library",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -33,7 +34,7 @@ def parse_arguments():
         "--source",
         action="append",
         choices=defs.TAGS,
-        help="Storefronts with games to add to Steam. If unspecified, uses all sources.",
+        help="Storefronts with games to add to Steam. If unspecified, uses all sources. Use argument multiple times to select multiple sources (--source itchio --source xbox).",
         required=False,
     )
 
@@ -99,7 +100,7 @@ def egs_collect_games(egs_manifest_path):
     """
     Returns an array of GameDefinitions of all the installed EGS games
     """
-    print(f"Scanning EGS manifest store ({egs_manifest_path})...")
+    print(f"\nScanning EGS manifest store ({egs_manifest_path})...")
     # loop over every .item fiile
     pathlist = Path(egs_manifest_path).glob("*.item")
     games = list()
@@ -182,6 +183,7 @@ def egs_collect_games(egs_manifest_path):
             )
 
     print(f"Collected {len(games)} games from the EGS manifest store")
+    games.sort()
     return games
 
 
@@ -189,9 +191,9 @@ def print_games(games):
     """
     games = list of GameDefinition
     """
-    row_fmt = "{: >3} | {: <25} | {: <10} | {: <32} | {: <25}"
-    print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Install Path"))
-    print("=" * ((25 + 3) * 2 + 10 + 50 + 6))
+    row_fmt = "{: >3} | {: <25} | {: <10} | {: <45} | {: <25}"
+    print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Executable"))
+    print("=" * (3 + 25 + 10 + 45 + 25))
     for i, game in enumerate(games, start=1):
         print(
             row_fmt.format(
@@ -199,7 +201,7 @@ def print_games(games):
                 game.display_name[:25],
                 game.storetag,
                 game.app_name,
-                game.executable_path,
+                f"{game.executable_path} {game.launch_arguments}",
             )
         )
 
@@ -315,7 +317,7 @@ def to_shortcut(game, use_uri):
         "appname": game.display_name,
         "Exe": shortcut,
         "StartDir": game.install_folder,
-        "icon": game.executable_path,
+        "icon": game.icon,
         "ShortcutPath": "",
         "LaunchOptions": game.launch_arguments,
         "IsHidden": 0,
@@ -444,6 +446,9 @@ def main():
         games += egs_collect_games(args.egs_manifests)
     if defs.TAG_ITCH in args.source:
         games += itch_collect_games(args.itch_library)
+    if defs.TAG_XBOX in args.source:
+        games += xbox_collect_games()
+    print()
     print_games(games)
 
     if not args.all:
