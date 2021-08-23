@@ -323,7 +323,7 @@ def add_games_to_shortcut_file(
     steamdb,
     user,
     games,
-    skip_backup,
+    shortcuts,
     use_uri,
     replace_existing,
     download_art_unsupported,
@@ -334,7 +334,7 @@ def add_games_to_shortcut_file(
         steamdb (SteamDatabase): steam wrapper object
         user (SteamAccount): user to add shortcuts to
         games ([GameDefinition]): games to add
-        skip_backup (bool): if we shouldn't back up the file
+        shortcuts (dict): loaded shortcuts vdf file content to modify
         use_uri (bool): if we should use the EGS uri, or the path to the executable
         replace_existing (bool): if a shortcut already exists, clobber it with new data for that game
         download_art_unsupported (bool): download art for unsupported games
@@ -355,19 +355,6 @@ def add_games_to_shortcut_file(
         print("Using the path to the executable instead of the Epic Games Launcher URI")
         print("You may experience issues with online games (eg GTAV!)")
         print()
-
-    shortcut_file_path = os.path.join(
-        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
-    )
-
-    if not os.path.exists(shortcut_file_path):
-        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
-        print(message)
-        return None, message
-
-    # read in the shortcuts file
-    with open(shortcut_file_path, "rb") as sf:
-        shortcuts = vdf.binary_load(sf)
 
     # Make a lookup of the path of every shortcut installed to their index in
     # the shortcuts file. If a path is already in the shortcuts file, we won't
@@ -448,23 +435,6 @@ def add_games_to_shortcut_file(
         print(msg)
         return None, msg
 
-    if skip_backup:
-        print("Not backing up `shortcuts.vdf` since you enjoy danger")
-        os.remove(shortcut_file_path)
-    else:
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        new_filename = shortcut_file_path + f"-{timestamp}.bak"
-
-        print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
-        os.rename(shortcut_file_path, new_filename)
-
-    new_bytes = vdf.binary_dumps(shortcuts)
-    with open(shortcut_file_path, "wb") as shortcut_file:
-        shortcut_file.write(new_bytes)
-
-    print("Updated `shortcuts.vdf` successfully!")
-    print()
-    print("➡   Restart Steam!")
     return (game_results, added), None
 
 
@@ -558,15 +528,49 @@ def main():
         print()
 
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
-    add_games_to_shortcut_file(
+
+    shortcut_file_path = os.path.join(
+        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
+    )
+
+    if not os.path.exists(shortcut_file_path):
+        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
+        print(message)
+        return 1
+
+    # read in the shortcuts file
+    with open(shortcut_file_path, "rb") as sf:
+        shortcuts = vdf.binary_load(sf)
+
+    result, msg = add_games_to_shortcut_file(
         steamdb,
         user,
         games,
-        args.live_dangerously,
+        shortcuts,
         args.use_uri,
         args.replace_existing,
         args.download_art_all_shortcuts,
     )
+
+    if should_write_vdf:
+        print()
+        if args.live_dangerously:
+            print("Not backing up `shortcuts.vdf` since you enjoy danger")
+            os.remove(shortcut_file_path)
+        else:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            new_filename = shortcut_file_path + f"-{timestamp}.bak"
+
+            print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
+            os.rename(shortcut_file_path, new_filename)
+
+        new_bytes = vdf.binary_dumps(shortcuts)
+        with open(shortcut_file_path, "wb") as shortcut_file:
+            shortcut_file.write(new_bytes)
+
+        print("Updated `shortcuts.vdf` successfully!")
+        print()
+        print("➡   Restart Steam!")
 
     print("\nDone.")
     return 0
