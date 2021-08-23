@@ -219,7 +219,7 @@ def print_games(games):
                 i,
                 game.display_name[:25],
                 game.storetag,
-                game.app_name,
+                game.app_name[:45],
                 f"{game.executable_path} {game.launch_arguments}",
             )
         )
