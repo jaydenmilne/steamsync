@@ -2,9 +2,10 @@
 
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-from pathlib import Path
 import gzip
 import json
+from pathlib import Path
+
 import toml
 
 import defs
@@ -145,7 +146,8 @@ def itch_collect_games(path_to_library):
 
 
 def test():
-    import pprint, os
+    import os
+    import pprint
 
     games = itch_collect_games(os.path.expandvars("$APPDATA/itch/apps"))
     pprint.pprint(

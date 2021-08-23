@@ -2,17 +2,17 @@
 
 import argparse
 import json
-import os
-from pathlib import Path
-import time
 import math
+import os
+import time
+from pathlib import Path
 
 import vdf
 
-from itch import itch_collect_games
-from xbox import xbox_collect_games
 import defs
 import steameditor
+from itch import itch_collect_games
+from xbox import xbox_collect_games
 
 
 def parse_arguments():

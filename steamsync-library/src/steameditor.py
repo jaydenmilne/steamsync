@@ -2,14 +2,14 @@
 
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-from datetime import datetime
-from pathlib import Path
 import binascii
 import json
 import os
-import unicodedata
 import re
 import shutil
+import unicodedata
+from datetime import datetime
+from pathlib import Path
 
 import requests
 import vdf

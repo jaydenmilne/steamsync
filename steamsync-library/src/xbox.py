@@ -2,11 +2,11 @@
 
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-from pathlib import Path
-from xml.dom import minidom
 import json
 import os
 import subprocess
+from pathlib import Path
+from xml.dom import minidom
 
 import defs
 import util
