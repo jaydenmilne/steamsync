@@ -390,7 +390,10 @@ def add_games_to_shortcut_file(
             )
             print(v)
             continue
-        path_to_index[exe] = k
+        launch_args = v.get("LaunchOptions", "")
+        # Include args to handle mulitple explorer.exe options for xbox.
+        path = f"{exe}|{launch_args}"
+        path_to_index[path] = k
         appname = v.get("appname")
         if download_art_unsupported and exe not in supported_games:
             # Create a temp definition to specify info required to download.
@@ -423,8 +426,9 @@ def add_games_to_shortcut_file(
 
     game_results = []
     for game in games:
-        shortcut = game.uri if use_uri and game.uri else game.executable_path
-        i = path_to_index.get(shortcut, None)
+        shortcut = (game.uri) if use_uri and game.uri else game.executable_path
+        path = f"{shortcut}|{game.launch_arguments}"
+        i = path_to_index.get(path, None)
         if i:
             if replace_existing:
                 shortcuts["shortcuts"][i] = to_shortcut(game, use_uri)
