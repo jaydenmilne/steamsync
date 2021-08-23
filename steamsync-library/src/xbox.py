@@ -114,11 +114,11 @@ def xbox_collect_games():
             if not is_game and not _is_game_judging_by_manifest(config):
                 continue
 
-            # exes without a MicrosoftGame.config cannot be run directly. We
-            # need to use explorer to launch them.
-            install = Path(os.path.expandvars("$WinDir"))
-            exe_name = "explorer.exe"
-            args = f"shell:appsFolder\\{app['Aumid']}"
+        # Xbox games put their version number in their path, so we can't rely
+        # on running the exe directly. We need to use explorer to launch by id.
+        install = Path(os.path.expandvars("$WinDir"))
+        exe_name = "explorer.exe"
+        args = f"shell:appsFolder\\{app['Aumid']}"
 
         if not exe_name:
             continue
