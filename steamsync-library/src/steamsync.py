@@ -68,6 +68,14 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "--remove-missing",
+        default=False,
+        help="Remove shortcuts to games that no longer exist. Uses selected sources to determine if games without executables (uri or Xbox) still exist. i.e., if you don't include xbox source all xbox games will appear to be missing.",
+        required=False,
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--live-dangerously",
         default=False,
         help="Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak",
@@ -438,6 +446,80 @@ def add_games_to_shortcut_file(
     return (game_results, added), None
 
 
+def remove_missing_games_from_shortcut_file(
+    steamdb,
+    user,
+    games,
+    shortcuts,
+):
+    """Remove games without executables from the shortcut file
+
+    Args:
+        steamdb (SteamDatabase): steam wrapper object
+        user (SteamAccount): user to add shortcuts to
+        games ([GameDefinition]): all known games (for uri/xbox checking)
+        shortcuts (dict): loaded shortcuts vdf file content to modify
+
+    Returns:
+        (([string], integer), string): First element of tuple is a tuple of an
+        array of "results" to display and the number of games removed. The
+        second is an error text if something went wrong.
+    """
+
+    print()
+
+    game_results = []
+
+    found_shortcuts = []
+    missing_shortcuts = []
+    for k, v in shortcuts["shortcuts"].items():
+        exe = v.get("Exe")
+        if not exe:
+            exe = v.get("exe")
+        if not exe:
+            print(
+                "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
+            )
+            print(v)
+            # Don't remove anything we don't understand.
+            found_shortcuts.append(v)
+            continue
+
+        exe_path = Path(exe)
+        exists = False
+        if not exe_path.is_file():
+            # Manually added shortcuts may have additional quotes.
+            exe_path = Path(exe.strip('"'))
+
+        exists = exe_path.is_file()
+
+        is_uri = "://" in exe or exe.lower().endswith("explorer.exe")
+        if is_uri:
+            appname = v.get("appname")
+            exists |= any(g for g in games if g.display_name == appname)
+
+        if exists:
+            found_shortcuts.append(v)
+        else:
+            missing_shortcuts.append(v)
+            appname = v.get("appname")
+            msg = f"Removing '{appname}'. Missing exe: {exe}"
+            print(msg)
+            game_results.append(msg)
+
+    shortcuts["shortcuts"] = {}
+    for i, v in enumerate(found_shortcuts):
+        shortcuts["shortcuts"][str(i)] = v
+
+    print(f"Removed {len(missing_shortcuts)} missing games")
+    if not missing_shortcuts:
+        msg = "No need to update `shortcuts.vdf` - nothing missing"
+        print(msg)
+        return None, msg
+
+    return (game_results, len(missing_shortcuts)), None
+
+
 ####################################################################################################
 # Main
 
@@ -542,6 +624,16 @@ def main():
     with open(shortcut_file_path, "rb") as sf:
         shortcuts = vdf.binary_load(sf)
 
+    should_write_vdf = False
+    if args.remove_missing:
+        result, msg = remove_missing_games_from_shortcut_file(
+            steamdb,
+            user,
+            all_games,
+            shortcuts,
+        )
+        should_write_vdf |= result is not None
+
     result, msg = add_games_to_shortcut_file(
         steamdb,
         user,
@@ -551,6 +643,7 @@ def main():
         args.replace_existing,
         args.download_art_all_shortcuts,
     )
+    should_write_vdf |= result is not None
 
     if should_write_vdf:
         print()
