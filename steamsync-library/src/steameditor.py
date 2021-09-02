@@ -18,7 +18,7 @@ k_applist_fname = "applist.json"
 re_remove_hyphen = re.compile(r"- ")
 re_remove_subtitle = re.compile(r"\s*:.*")
 re_remove_braces = re.compile(r"\s*\(.*\)")
-re_remove_pc = re.compile(r" (pc|for windows)$")
+re_remove_pc = re.compile(r"[ _](pc|for windows|windows)$")
 
 
 def _strip_nonascii(text):
@@ -378,7 +378,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "ABZU"
+    game_name = "Katamari Damacy Reroll_Windows"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
