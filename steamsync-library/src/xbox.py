@@ -114,32 +114,39 @@ def xbox_collect_games():
             if not is_game and not _is_game_judging_by_manifest(config):
                 continue
 
-        # Xbox games put their version number in their path, so we can't rely
-        # on running the exe directly. We need to use explorer to launch by id.
-        install = Path(os.path.expandvars("$WinDir"))
-        exe_name = "explorer.exe"
-        args = f"shell:appsFolder\\{app['Aumid']}"
+            # We have a game, but don't have an exe path (an older game).
+            # Doesn't matter because we launch by id.
+            exe_name = None
 
-        if not exe_name:
-            continue
 
-        exe = install / exe_name
-        if not exe.is_file():
-            print(
-                f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}"
-            )
-            continue
-        if not util.is_executable_game(exe):
-            print(
-                f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}."
-            )
-            continue
+        if exe_name:
+            # We only store the exe to validate the game is real and for
+            # migration to uri-based launching.
+            exe = install / exe_name
+
+            if not exe.is_file():
+                print(
+                    f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}"
+                )
+                continue
+            if not util.is_executable_game(exe):
+                print(
+                    f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}."
+                )
+                continue
+            working_dir = (
+                exe.parent.anchor
+            )  # minimal valid path since we won't launch via exe
+
+        else:
+            exe = ""
+            working_dir = Path("/")
 
         game_def = defs.GameDefinition(
             str(exe),
             game_name,
-            app["Appid"],
-            str(exe.parent),
+            app["Aumid"],
+            str(working_dir),
             args,
             None,
             defs.TAG_XBOX,

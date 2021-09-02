@@ -214,7 +214,7 @@ def egs_collect_games(egs_manifest_path):
     return games
 
 
-def print_games(games):
+def print_games(games, use_uri):
     """
     games = list of GameDefinition
     """
@@ -222,13 +222,14 @@ def print_games(games):
     print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Executable"))
     print("=" * (3 + 25 + 10 + 45 + 25))
     for i, game in enumerate(games, start=1):
+        exe, launch_args = game.get_launcher(use_uri)
         print(
             row_fmt.format(
                 i,
                 game.display_name[:25],
                 game.storetag,
                 game.app_name[:45],
-                f"{game.executable_path} {game.launch_arguments}",
+                f"{exe} {launch_args}",
             )
         )
 
@@ -304,10 +305,7 @@ def to_shortcut(game, use_uri):
     into Steam's shortcuts.vdf
     """
 
-    if use_uri and game.uri:
-        shortcut = game.uri
-    else:
-        shortcut = game.executable_path
+    shortcut, launch_args = game.get_launcher(use_uri)
 
     return {
         "appname": game.display_name,
@@ -315,7 +313,7 @@ def to_shortcut(game, use_uri):
         "StartDir": game.install_folder,
         "icon": game.icon,
         "ShortcutPath": "",
-        "LaunchOptions": game.launch_arguments,
+        "LaunchOptions": launch_args,
         "IsHidden": 0,
         "AllowDesktopConfig": 1,
         "AllowOverlay": 1,
@@ -325,6 +323,14 @@ def to_shortcut(game, use_uri):
         "LastPlayTime": 0,  # todo - is this right? if we really wanted we could parse this in from EGS manifest files...
         "tags": {"0": "steamsync", "1": game.storetag},
     }
+
+
+def get_exe_from_shortcut(shortcut):
+    exe = shortcut.get("Exe")
+    if not exe:
+        exe = shortcut.get("exe")
+    # May return None
+    return exe
 
 
 def add_games_to_shortcut_file(
@@ -374,11 +380,13 @@ def add_games_to_shortcut_file(
     if download_art_unsupported:
         print("Downloading art for existing shortcuts...")
 
-    supported_games = {game.executable_path: game for game in games}
+    supported_games = {}
+    for game in games:
+        exe, _ = game.get_launcher(use_uri)
+        supported_games[exe] = game
+
     for k, v in shortcuts["shortcuts"].items():
-        exe = v.get("Exe")
-        if not exe:
-            exe = v.get("exe")
+        exe = get_exe_from_shortcut(v)
         if not exe:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
@@ -421,13 +429,23 @@ def add_games_to_shortcut_file(
 
     game_results = []
     for game in games:
-        shortcut = (game.uri) if use_uri and game.uri else game.executable_path
-        path = f"{shortcut}|{game.launch_arguments}"
+        shortcut, launch_args = game.get_launcher(use_uri)
+        path = f"{shortcut}|{launch_args}"
         i = path_to_index.get(path, None)
+        if not i:
+            # Detect old xbox exe shortcuts so we can migrate them.
+            path = f"{game.executable_path}|"
+            i = path_to_index.get(path, None)
         if i:
             if replace_existing:
-                shortcuts["shortcuts"][i] = to_shortcut(game, use_uri)
+                old_shortcut = shortcuts["shortcuts"][i]
+                new_shortcut = to_shortcut(game, use_uri)
+                print(
+                    f"Replacing {old_shortcut['appname']} ({get_exe_from_shortcut(old_shortcut)} {old_shortcut.get('LaunchOptions', '')})\n     with {new_shortcut['appname']} ({get_exe_from_shortcut(new_shortcut)} {new_shortcut.get('LaunchOptions', '')})"
+                )
+                shortcuts["shortcuts"][i] = new_shortcut
                 added += 1
+
             else:
                 msg = f"{game.display_name}: Not creating shortcut since it already has one"
                 print(msg)
@@ -473,9 +491,7 @@ def remove_missing_games_from_shortcut_file(
     found_shortcuts = []
     missing_shortcuts = []
     for k, v in shortcuts["shortcuts"].items():
-        exe = v.get("Exe")
-        if not exe:
-            exe = v.get("exe")
+        exe = get_exe_from_shortcut(v)
         if not exe:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
@@ -485,18 +501,20 @@ def remove_missing_games_from_shortcut_file(
             found_shortcuts.append(v)
             continue
 
-        exe_path = Path(exe)
         exists = False
-        if not exe_path.is_file():
-            # Manually added shortcuts may have additional quotes.
-            exe_path = Path(exe.strip('"'))
-
-        exists = exe_path.is_file()
 
         is_uri = "://" in exe or exe.lower().endswith("explorer.exe")
         if is_uri:
-            appname = v.get("appname")
-            exists |= any(g for g in games if g.display_name == appname)
+            args = v.get("LaunchOptions", "")
+            exists |= any(g for g in games if g.uri == exe)  # epic uri
+            exists |= any(g for g in games if g.uri == args)  # xbox uri
+        else:
+            exe_path = Path(exe)
+            if not exe_path.is_file():
+                # Manually added shortcuts may have additional quotes.
+                exe_path = Path(exe.strip('"'))
+
+            exists = exe_path.is_file()
 
         if exists:
             found_shortcuts.append(v)
@@ -534,7 +552,7 @@ def main():
     if defs.TAG_XBOX in args.source:
         games += xbox_collect_games()
     print()
-    print_games(games)
+    print_games(games, args.use_uri)
 
     all_games = games
 
