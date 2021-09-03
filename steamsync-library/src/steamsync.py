@@ -568,7 +568,9 @@ def main():
     steamid = args.steamid
     try:
         steamdb = steameditor.SteamDatabase(
-            args.steam_path, os.path.expandvars("$LOCALAPPDATA/steamsync/cache")
+            args.steam_path,
+            os.path.expandvars("$LOCALAPPDATA/steamsync/cache"),
+            args.use_uri,
         )
         accounts = steamdb.enumerate_steam_accounts()
     except FileNotFoundError as e:
