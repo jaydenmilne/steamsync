@@ -18,7 +18,7 @@ k_applist_fname = "applist.json"
 re_remove_hyphen = re.compile(r"- ")
 re_remove_subtitle = re.compile(r"\s*:.*")
 re_remove_braces = re.compile(r"\s*\(.*\)")
-re_remove_pc = re.compile(r" (pc|for windows)$")
+re_remove_pc = re.compile(r"[ _](pc|for windows|windows)$")
 
 
 def _strip_nonascii(text):
@@ -37,6 +37,12 @@ def _remove_accents(text):
     """
     nfkd_form = unicodedata.normalize("NFKD", text)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+
+def _remove_punctuation(text):
+    """Remove punctuation character to make for easier comparisons.
+    """
+    return re.sub(r"[:;,.=+?]", "", text)
 
 
 class SteamAccount:
@@ -125,7 +131,7 @@ class SteamDatabase:
         """
         data = None
         now = datetime.utcnow()
-        current_version = 2
+        current_version = 3
 
         applist_file = self._cache_folder / k_applist_fname
         if applist_file.is_file():
@@ -159,6 +165,10 @@ class SteamDatabase:
                     # Include a stripped set for better name guessing.
                     # Without accents (for ABZU):
                     stripped = _remove_accents(name)
+                    if stripped not in name_to_id:
+                        stripped_to_id[stripped] = g["appid"]
+                    # Without punctuation (for Raji)
+                    stripped = _remove_punctuation(name)
                     if stripped not in name_to_id:
                         stripped_to_id[stripped] = g["appid"]
                     # Without subtitle:
@@ -211,6 +221,12 @@ class SteamDatabase:
             # For: "Grand Theft Auto V: Premium Edition" -> "Grand Theft Auto V"
             stripped = re_remove_subtitle.sub("", name, 1)
             appid = stripped_to_id.get(stripped)
+        if not appid:
+            # For: "Raji: An Ancient Epic" -> "Raji An Ancient Epic"
+            stripped = _remove_punctuation(name)
+            appid = name_to_id.get(stripped)
+            if not appid:
+                appid = stripped_to_id.get(stripped)
         if not appid:
             # For: "ABZÛ" -> "ABZU"
             name = _remove_accents(name)
@@ -383,7 +399,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "ABZU"
+    game_name = "Raji An Ancient Epic"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
