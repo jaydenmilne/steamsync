@@ -2,14 +2,14 @@
 
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-from datetime import datetime
-from pathlib import Path
 import binascii
 import json
 import os
-import unicodedata
 import re
 import shutil
+import unicodedata
+from datetime import datetime
+from pathlib import Path
 
 import requests
 import vdf
@@ -65,14 +65,16 @@ class SteamDatabase:
 
     """Database of steam information."""
 
-    def __init__(self, steam_path, cache_folder):
+    def __init__(self, steam_path, cache_folder, prefer_uri=False):
         """
         :steam_path: Path to folder containing steam.exe.
         :cache_folder: Where to store downloaded files.
+        :prefer_uri: Use uris for GameDefinitions where possible.
         """
         self._steam_path = Path(steam_path)
         self._cache_folder = Path(cache_folder)
         self._apps = self._load_app_list()
+        self._prefer_uri = prefer_uri
 
     def enumerate_steam_accounts(self):
         """
@@ -379,7 +381,8 @@ class SteamDatabase:
         _get_grid_art_destinations(GameDefinition, SteamAccount) -> dict[str,Path]
         """
         grid = Path(user.get_grid_folder(self._steam_path))
-        shortcut = self._get_steam_shortcut_id(game.executable_path, game.display_name)
+        exe, args = game.get_launcher(self._prefer_uri)
+        shortcut = self._get_steam_shortcut_id(exe, game.display_name)
         # For some reason Big Picture uses 64 bit ids.
         # See https://github.com/scottrice/Ice/blob/7130b54c8d2fa7d0e2c0994ca1f2aa3fb2a27ba9/ice/steam_grid.py#L49-L64
         bp_shortcut = (shortcut << 32) | 0x02000000
@@ -395,7 +398,7 @@ def _test():
     import pprint
 
     db = SteamDatabase(
-        "C:/Program Files (x86)/Steam", os.path.expandvars("$TEMP/steamsync")
+        "C:/Program Files (x86)/Steam", os.path.expandvars("$TEMP/steamsync"), prefer_uri=False
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])

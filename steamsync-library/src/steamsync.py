@@ -2,17 +2,17 @@
 
 import argparse
 import json
-import os
-from pathlib import Path
-import time
 import math
+import os
+import time
+from pathlib import Path
 
 import vdf
 
-from itch import itch_collect_games
-from xbox import xbox_collect_games
 import defs
 import steameditor
+from itch import itch_collect_games
+from xbox import xbox_collect_games
 
 
 def parse_arguments():
@@ -63,6 +63,14 @@ def parse_arguments():
         "--replace-existing",
         default=False,
         help="Instead of skipping existing shortcuts (ones with the same path), overwrite them with new data. Useful to repair broken shortcuts.",
+        required=False,
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--remove-missing",
+        default=False,
+        help="Remove shortcuts to games that no longer exist. Uses selected sources to determine if games without executables (uri or Xbox) still exist. i.e., if you don't include xbox source all xbox games will appear to be missing.",
         required=False,
         action="store_true",
     )
@@ -206,7 +214,7 @@ def egs_collect_games(egs_manifest_path):
     return games
 
 
-def print_games(games):
+def print_games(games, use_uri):
     """
     games = list of GameDefinition
     """
@@ -214,13 +222,14 @@ def print_games(games):
     print(row_fmt.format("Num", "Game Name", "Source", "App ID", "Executable"))
     print("=" * (3 + 25 + 10 + 45 + 25))
     for i, game in enumerate(games, start=1):
+        exe, launch_args = game.get_launcher(use_uri)
         print(
             row_fmt.format(
                 i,
                 game.display_name[:25],
                 game.storetag,
-                game.app_name,
-                f"{game.executable_path} {game.launch_arguments}",
+                game.app_name[:45],
+                f"{exe} {launch_args}",
             )
         )
 
@@ -296,10 +305,7 @@ def to_shortcut(game, use_uri):
     into Steam's shortcuts.vdf
     """
 
-    if use_uri and game.uri:
-        shortcut = game.uri
-    else:
-        shortcut = game.executable_path
+    shortcut, launch_args = game.get_launcher(use_uri)
 
     return {
         "appname": game.display_name,
@@ -307,7 +313,7 @@ def to_shortcut(game, use_uri):
         "StartDir": game.install_folder,
         "icon": game.icon,
         "ShortcutPath": "",
-        "LaunchOptions": game.launch_arguments,
+        "LaunchOptions": launch_args,
         "IsHidden": 0,
         "AllowDesktopConfig": 1,
         "AllowOverlay": 1,
@@ -319,11 +325,19 @@ def to_shortcut(game, use_uri):
     }
 
 
+def get_exe_from_shortcut(shortcut):
+    exe = shortcut.get("Exe")
+    if not exe:
+        exe = shortcut.get("exe")
+    # May return None
+    return exe
+
+
 def add_games_to_shortcut_file(
     steamdb,
     user,
     games,
-    skip_backup,
+    shortcuts,
     use_uri,
     replace_existing,
     download_art_unsupported,
@@ -334,7 +348,7 @@ def add_games_to_shortcut_file(
         steamdb (SteamDatabase): steam wrapper object
         user (SteamAccount): user to add shortcuts to
         games ([GameDefinition]): games to add
-        skip_backup (bool): if we shouldn't back up the file
+        shortcuts (dict): loaded shortcuts vdf file content to modify
         use_uri (bool): if we should use the EGS uri, or the path to the executable
         replace_existing (bool): if a shortcut already exists, clobber it with new data for that game
         download_art_unsupported (bool): download art for unsupported games
@@ -356,19 +370,6 @@ def add_games_to_shortcut_file(
         print("You may experience issues with online games (eg GTAV!)")
         print()
 
-    shortcut_file_path = os.path.join(
-        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
-    )
-
-    if not os.path.exists(shortcut_file_path):
-        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
-        print(message)
-        return None, message
-
-    # read in the shortcuts file
-    with open(shortcut_file_path, "rb") as sf:
-        shortcuts = vdf.binary_load(sf)
-
     # Make a lookup of the path of every shortcut installed to their index in
     # the shortcuts file. If a path is already in the shortcuts file, we won't
     # add another one (ie the path is what makes a shortcut unique) or if we
@@ -379,18 +380,23 @@ def add_games_to_shortcut_file(
     if download_art_unsupported:
         print("Downloading art for existing shortcuts...")
 
-    supported_games = {game.executable_path: game for game in games}
+    supported_games = {}
+    for game in games:
+        exe, _ = game.get_launcher(use_uri)
+        supported_games[exe] = game
+
     for k, v in shortcuts["shortcuts"].items():
-        exe = v.get("Exe")
-        if not exe:
-            exe = v.get("exe")
+        exe = get_exe_from_shortcut(v)
         if not exe:
             print(
                 "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
             )
             print(v)
             continue
-        path_to_index[exe] = k
+        launch_args = v.get("LaunchOptions", "")
+        # Include args to handle mulitple explorer.exe options for xbox.
+        path = f"{exe}|{launch_args}"
+        path_to_index[path] = k
         appname = v.get("appname")
         if download_art_unsupported and exe not in supported_games:
             # Create a temp definition to specify info required to download.
@@ -423,12 +429,23 @@ def add_games_to_shortcut_file(
 
     game_results = []
     for game in games:
-        shortcut = game.uri if use_uri and game.uri else game.executable_path
-        i = path_to_index.get(shortcut, None)
+        shortcut, launch_args = game.get_launcher(use_uri)
+        path = f"{shortcut}|{launch_args}"
+        i = path_to_index.get(path, None)
+        if not i:
+            # Detect old xbox exe shortcuts so we can migrate them.
+            path = f"{game.executable_path}|"
+            i = path_to_index.get(path, None)
         if i:
             if replace_existing:
-                shortcuts["shortcuts"][i] = to_shortcut(game, use_uri)
+                old_shortcut = shortcuts["shortcuts"][i]
+                new_shortcut = to_shortcut(game, use_uri)
+                print(
+                    f"Replacing {old_shortcut['appname']} ({get_exe_from_shortcut(old_shortcut)} {old_shortcut.get('LaunchOptions', '')})\n     with {new_shortcut['appname']} ({get_exe_from_shortcut(new_shortcut)} {new_shortcut.get('LaunchOptions', '')})"
+                )
+                shortcuts["shortcuts"][i] = new_shortcut
                 added += 1
+
             else:
                 msg = f"{game.display_name}: Not creating shortcut since it already has one"
                 print(msg)
@@ -444,24 +461,81 @@ def add_games_to_shortcut_file(
         print(msg)
         return None, msg
 
-    if skip_backup:
-        print("Not backing up `shortcuts.vdf` since you enjoy danger")
-        os.remove(shortcut_file_path)
-    else:
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        new_filename = shortcut_file_path + f"-{timestamp}.bak"
-
-        print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
-        os.rename(shortcut_file_path, new_filename)
-
-    new_bytes = vdf.binary_dumps(shortcuts)
-    with open(shortcut_file_path, "wb") as shortcut_file:
-        shortcut_file.write(new_bytes)
-
-    print("Updated `shortcuts.vdf` successfully!")
-    print()
-    print("➡   Restart Steam!")
     return (game_results, added), None
+
+
+def remove_missing_games_from_shortcut_file(
+    steamdb,
+    user,
+    games,
+    shortcuts,
+):
+    """Remove games without executables from the shortcut file
+
+    Args:
+        steamdb (SteamDatabase): steam wrapper object
+        user (SteamAccount): user to add shortcuts to
+        games ([GameDefinition]): all known games (for uri/xbox checking)
+        shortcuts (dict): loaded shortcuts vdf file content to modify
+
+    Returns:
+        (([string], integer), string): First element of tuple is a tuple of an
+        array of "results" to display and the number of games removed. The
+        second is an error text if something went wrong.
+    """
+
+    print()
+
+    game_results = []
+
+    found_shortcuts = []
+    missing_shortcuts = []
+    for k, v in shortcuts["shortcuts"].items():
+        exe = get_exe_from_shortcut(v)
+        if not exe:
+            print(
+                "Warning: Entry in shortcuts.vdf has no `Exe` field! Is this a malformed entry?"
+            )
+            print(v)
+            # Don't remove anything we don't understand.
+            found_shortcuts.append(v)
+            continue
+
+        exists = False
+
+        is_uri = "://" in exe or exe.lower().endswith("explorer.exe")
+        if is_uri:
+            args = v.get("LaunchOptions", "")
+            exists |= any(g for g in games if g.uri == exe)  # epic uri
+            exists |= any(g for g in games if g.uri == args)  # xbox uri
+        else:
+            exe_path = Path(exe)
+            if not exe_path.is_file():
+                # Manually added shortcuts may have additional quotes.
+                exe_path = Path(exe.strip('"'))
+
+            exists = exe_path.is_file()
+
+        if exists:
+            found_shortcuts.append(v)
+        else:
+            missing_shortcuts.append(v)
+            appname = v.get("appname")
+            msg = f"Removing '{appname}'. Missing exe: {exe}"
+            print(msg)
+            game_results.append(msg)
+
+    shortcuts["shortcuts"] = {}
+    for i, v in enumerate(found_shortcuts):
+        shortcuts["shortcuts"][str(i)] = v
+
+    print(f"Removed {len(missing_shortcuts)} missing games")
+    if not missing_shortcuts:
+        msg = "No need to update `shortcuts.vdf` - nothing missing"
+        print(msg)
+        return None, msg
+
+    return (game_results, len(missing_shortcuts)), None
 
 
 ####################################################################################################
@@ -478,7 +552,7 @@ def main():
     if defs.TAG_XBOX in args.source:
         games += xbox_collect_games()
     print()
-    print_games(games)
+    print_games(games, args.use_uri)
 
     all_games = games
 
@@ -494,7 +568,9 @@ def main():
     steamid = args.steamid
     try:
         steamdb = steameditor.SteamDatabase(
-            args.steam_path, os.path.expandvars("$LOCALAPPDATA/steamsync/cache")
+            args.steam_path,
+            os.path.expandvars("$LOCALAPPDATA/steamsync/cache"),
+            args.use_uri,
         )
         accounts = steamdb.enumerate_steam_accounts()
     except FileNotFoundError as e:
@@ -554,15 +630,60 @@ def main():
         print()
 
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
-    add_games_to_shortcut_file(
+
+    shortcut_file_path = os.path.join(
+        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
+    )
+
+    if not os.path.exists(shortcut_file_path):
+        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
+        print(message)
+        return 1
+
+    # read in the shortcuts file
+    with open(shortcut_file_path, "rb") as sf:
+        shortcuts = vdf.binary_load(sf)
+
+    should_write_vdf = False
+    if args.remove_missing:
+        result, msg = remove_missing_games_from_shortcut_file(
+            steamdb,
+            user,
+            all_games,
+            shortcuts,
+        )
+        should_write_vdf |= result is not None
+
+    result, msg = add_games_to_shortcut_file(
         steamdb,
         user,
         games,
-        args.live_dangerously,
+        shortcuts,
         args.use_uri,
         args.replace_existing,
         args.download_art_all_shortcuts,
     )
+    should_write_vdf |= result is not None
+
+    if should_write_vdf:
+        print()
+        if args.live_dangerously:
+            print("Not backing up `shortcuts.vdf` since you enjoy danger")
+            os.remove(shortcut_file_path)
+        else:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            new_filename = shortcut_file_path + f"-{timestamp}.bak"
+
+            print(f"Backing up `shortcuts.vdf` to `{new_filename}`")
+            os.rename(shortcut_file_path, new_filename)
+
+        new_bytes = vdf.binary_dumps(shortcuts)
+        with open(shortcut_file_path, "wb") as shortcut_file:
+            shortcut_file.write(new_bytes)
+
+        print("Updated `shortcuts.vdf` successfully!")
+        print()
+        print("➡   Restart Steam!")
 
     print("\nDone.")
     return 0
