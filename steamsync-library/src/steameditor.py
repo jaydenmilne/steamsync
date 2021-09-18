@@ -94,8 +94,13 @@ class SteamDatabase:
                 with open(
                     localconfig_file, "r", encoding="utf-8", errors="replace"
                 ) as localconfig:
-                    cfg = vdf.load(localconfig)
-                    username = cfg["UserLocalConfigStore"]["friends"]["PersonaName"]
+                    cfg = vdf.load(localconfig)["UserLocalConfigStore"]
+                    username = "(unknown username)"
+                    # Some users have Friends, some have friends, and some are friendless
+                    if "friends" in cfg:
+                        username = cfg["friends"]["PersonaName"]
+                    if "Friends" in cfg:
+                        username = cfg["Friends"]["PersonaName"]
                     accounts.append(SteamAccount(steamid, username))
 
         return accounts
