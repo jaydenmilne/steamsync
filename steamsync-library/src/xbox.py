@@ -11,60 +11,43 @@ from xml.dom import minidom
 import defs
 import util
 
-
-def _get_details_from_config(path_to_config):
-    """Get the exe file name (not full path) to launch from the config.
-
-    _get_details_from_config(Path) -> str,str
-    """
-    with path_to_config.open("r", encoding="utf-8") as f:
-        doc = minidom.parse(f)
-    # "Tetris® Effect: Connected" instead of "Tetrisr Effect: Connected" from list_xbox_games.
-    display_name = doc.getElementsByTagName("ShellVisuals")[0].getAttribute(
-        "DefaultDisplayName"
-    )
-    exes = doc.getElementsByTagName("Executable")
-    for exe in exes:
-        return exe.getAttribute("Name"), display_name
-
-
-def _is_game_judging_by_manifest(path_to_manifest):
+def _is_game_judging_by_manifest(path_to_manifest, aumid):
     """Determine if app looks like a game from its AppxManifest.
 
-    _is_game_judging_by_manifest(Path) -> bool
+    _is_game_judging_by_manifest(Path) -> str(exe_name), str(encoded_display_name)
     """
+
+    # First, check if this is a Microsoft app
+    if "Microsoft.Microsoft" in aumid:
+        return None, None
+
     with path_to_manifest.open("r", encoding="utf-8") as f:
         doc = minidom.parse(f)
 
-    # Exclude Xbox apps which may otherwise look like a game
-    name = [
-        e.getAttribute("DisplayName").lower()
-        for e in doc.getElementsByTagName("uap:VisualElements")
-    ]
-    if any(e for e in name if "xbox" in e):
-        return None
-
-    # Exclude non-desktop apps
-    family = [
+    # Check for the Xbox live protocol to determine if it is a game
+    protocol = [
         e.getAttribute("Name").lower()
-        for e in doc.getElementsByTagName("TargetDeviceFamily")
+        for e in doc.getElementsByTagName("uap:Protocol")
     ]
-    if "windows.desktop" not in family:
-        return None
+    if not any(e for e in protocol if "ms-xbl" in e):
+        return None, None
+    
+    # Get the properly encoded display name eg. # "Tetris® Effect: Connected" instead of "Tetrisr Effect: Connected"
+    display_name = doc.getElementsByTagName("uap:VisualElements")[0].getAttribute(
+        "DisplayName"
+    )
+    display_name = str(display_name)
+    if "ms-resource" in display_name or "DisplayName" in display_name:
+        # Fall back to application name and check again
+        display_name = doc.getElementsByTagName("DisplayName")[0].childNodes[0].data
+        if "ms-resource" in display_name or "DisplayName" in display_name:
+            display_name = None
 
-    # Assume anything using Unity or Xbox are a game.
-    libs = [e.firstChild.nodeValue for e in doc.getElementsByTagName("Path")]
-    game_services = "Microsoft.Xbox.Services.dll" in libs
-    unity_game = "UnityPlayer.dll" in libs
-    if not game_services and not unity_game:
-        # Run out of ways to determine if this is a game, so assume not.
-        # print(f"App determined to be not game {path_to_manifest.parent.name}")
-        return None
     exes = doc.getElementsByTagName("Application")
     for exe in exes:
         exe_name = exe.getAttribute("Executable")
-        return exe_name and not exe_name.isspace()
-
+        if exe_name and not exe_name.isspace():
+            return exe_name, display_name
 
 def xbox_collect_games():
     """Collect a list of "Xbox" games from Microsoft Game Store.
@@ -84,63 +67,53 @@ def xbox_collect_games():
     )
     applist = json.loads(output)
 
+    # Initial filter - Microsoft games usually have a unique "Kind" so if the "Kind" contains App, then we know to ignore it
+    filtered = []
     for app in applist:
+        if app["Aumid"] is None or app["Kind"] is None:
+            continue
+        if not ("Microsoft" in app["Aumid"] and "App" in app["Kind"]):
+            filtered.append(app)
+
+    for app in filtered:
         args = ""
         game_name = app["PrettyName"]
         install = Path(app["InstallLocation"])
-        # Can't filter on Kind='Game' because older games like Prey 2017 are
-        # Kind='App' and some put their name there! Most games have a
-        # MicrosoftGame.config.
-        config = install / "MicrosoftGame.config"
-        if config.is_file():
-            exe_name, game_name = _get_details_from_config(config)
-        else:
-            is_game = app["Kind"] == "Game"
-            if is_game:
-                print(
-                    f"Warning: Failed to find {config.name} file for game '{game_name}'. Expected: {config}"
-                )
 
-            # Unfortunately, some games (Spiritfarer) don't have a
-            # MicrosoftGame file, so we need to try harder. Everything should
-            # have a manifest.
-            config = install / "AppxManifest.xml"
-            if not config.is_file():
-                print(
-                    f"Warning: Failed to find {config.name} file for '{game_name}'. Expected: {config}"
-                )
-                continue
+        # Everything should have a manifest.
+        config = install / "AppxManifest.xml"
+        if not config.is_file():
+            print(
+                f"Warning: Failed to find {config.name} file for '{game_name}'. Expected: {config}"
+            )
+            continue
 
-            if not is_game and not _is_game_judging_by_manifest(config):
-                continue
+        exe_name, proper_display_name = _is_game_judging_by_manifest(config, app["Aumid"])
+        if not exe_name:
+            continue
 
-            # We have a game, but don't have an exe path (an older game).
-            # Doesn't matter because we launch by id.
-            exe_name = None
+        # Replace the name with an encoded name if found
+        if proper_display_name:
+            game_name = proper_display_name
 
+        # We only store the exe to validate the game is real and for
+        # migration to uri-based launching.
+        exe = install / exe_name
 
-        if exe_name:
-            # We only store the exe to validate the game is real and for
-            # migration to uri-based launching.
-            exe = install / exe_name
+        if not exe.is_file():
+            print(
+                f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}"
+            )
+            continue
+        if not util.is_executable_game(exe):
+            print(
+                f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}."
+            )
+            continue
+        working_dir = (
+            exe.parent.anchor
+        )  # minimal valid path since we won't launch via exe
 
-            if not exe.is_file():
-                print(
-                    f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}"
-                )
-                continue
-            if not util.is_executable_game(exe):
-                print(
-                    f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}."
-                )
-                continue
-            working_dir = (
-                exe.parent.anchor
-            )  # minimal valid path since we won't launch via exe
-
-        else:
-            exe = ""
-            working_dir = Path("/")
 
         game_def = defs.GameDefinition(
             str(exe),
@@ -179,7 +152,6 @@ def _test():
             for g in xbox_collect_games()
         ]
     )
-
 
 if __name__ == "__main__":
     _test()
