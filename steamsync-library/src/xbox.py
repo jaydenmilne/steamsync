@@ -11,6 +11,7 @@ from xml.dom import minidom
 import defs
 import util
 
+
 def _is_game_judging_by_manifest(path_to_manifest, aumid):
     """Determine if app looks like a game from its AppxManifest.
 
@@ -25,17 +26,12 @@ def _is_game_judging_by_manifest(path_to_manifest, aumid):
         doc = minidom.parse(f)
 
     # Check for the Xbox live protocol to determine if it is a game
-    protocol = [
-        e.getAttribute("Name").lower()
-        for e in doc.getElementsByTagName("uap:Protocol")
-    ]
+    protocol = [e.getAttribute("Name").lower() for e in doc.getElementsByTagName("uap:Protocol")]
     if not any(e for e in protocol if "ms-xbl" in e):
         return None, None
-    
+
     # Get the properly encoded display name eg. # "Tetris® Effect: Connected" instead of "Tetrisr Effect: Connected"
-    display_name = doc.getElementsByTagName("uap:VisualElements")[0].getAttribute(
-        "DisplayName"
-    )
+    display_name = doc.getElementsByTagName("uap:VisualElements")[0].getAttribute("DisplayName")
     display_name = str(display_name)
     if "ms-resource" in display_name or "DisplayName" in display_name:
         # Fall back to application name and check again
@@ -48,6 +44,7 @@ def _is_game_judging_by_manifest(path_to_manifest, aumid):
         exe_name = exe.getAttribute("Executable")
         if exe_name and not exe_name.isspace():
             return exe_name, display_name
+
 
 def xbox_collect_games():
     """Collect a list of "Xbox" games from Microsoft Game Store.
@@ -62,9 +59,7 @@ def xbox_collect_games():
     script = Path(__file__).resolve().parent / "list_xbox_games.ps1"
     with script.open("r", encoding="utf-8") as f:
         script_code = "".join(f.readlines())
-    output = subprocess.check_output(
-        ["powershell.exe", str(script_code)], universal_newlines=True
-    )
+    output = subprocess.check_output(["powershell.exe", str(script_code)], universal_newlines=True)
     applist = json.loads(output)
 
     # Initial filter - Microsoft games usually have a unique "Kind" so if the "Kind" contains App, then we know to ignore it
@@ -83,9 +78,7 @@ def xbox_collect_games():
         # Everything should have a manifest.
         config = install / "AppxManifest.xml"
         if not config.is_file():
-            print(
-                f"Warning: Failed to find {config.name} file for '{game_name}'. Expected: {config}"
-            )
+            print(f"Warning: Failed to find {config.name} file for '{game_name}'. Expected: {config}")
             continue
 
         exe_name, proper_display_name = _is_game_judging_by_manifest(config, app["Aumid"])
@@ -101,19 +94,12 @@ def xbox_collect_games():
         exe = install / exe_name
 
         if not exe.is_file():
-            print(
-                f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}"
-            )
+            print(f"Warning: Failed to find exe for game '{game_name}'. Expected: {exe}")
             continue
         if not util.is_executable_game(exe):
-            print(
-                f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}."
-            )
+            print(f"Warning: No permissions to access exe for game: '{game_name}'. Tried to read: {exe}.")
             continue
-        working_dir = (
-            exe.parent.anchor
-        )  # minimal valid path since we won't launch via exe
-
+        working_dir = exe.parent.anchor  # minimal valid path since we won't launch via exe
 
         game_def = defs.GameDefinition(
             str(exe),
@@ -152,6 +138,7 @@ def _test():
             for g in xbox_collect_games()
         ]
     )
+
 
 if __name__ == "__main__":
     _test()
