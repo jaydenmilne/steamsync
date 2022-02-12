@@ -2,9 +2,9 @@
 
 import argparse
 import json
-import math
 import os
 import time
+import subprocess
 from pathlib import Path
 
 import vdf
@@ -34,6 +34,12 @@ def parse_arguments():
         "--egs-manifests",
         default="C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests",
         help="Path to search for Epic Games Store manifest files",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--legendary-command",
+        help="Command to run 'legendary' executable",
         required=False,
     )
 
@@ -121,6 +127,46 @@ def parse_arguments():
         args.download_art = True
     return args
 
+def legendary_collect_games(executable_cmd, with_art = False):
+    """
+    Returns an array of GameDefinitions of all the installed EGS games that 'legendary' knows about
+    """
+    games_dict = {}
+    if with_art:
+        # populate info for all installable games
+        games_raw_json = subprocess.Popen([executable_cmd, "list-games", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
+        games_json = json.loads(games_raw_json)
+        for entry in games_json:
+            # TODO: Map other useful information, like tags?
+            games_dict[entry['app_name']] = {
+                'art': entry['metadata']['keyImages'][0]
+            }
+    games = list()
+    raw_json = subprocess.Popen([executable_cmd, "list-installed", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
+    parsed_json = json.loads(raw_json)
+    for entry in parsed_json:
+        app_name = entry['app_name']
+        executable_path = executable_cmd + ' launch ' + app_name
+        display_name = entry['title']
+        install_location = entry['install_path']
+        art_url = None
+        icon = os.path.join(install_location, entry['executable'])
+        if app_name in games_dict:
+             art_url = games_dict[app_name]['art']
+
+        games.append(
+            defs.GameDefinition(
+                executable_path,
+                display_name,
+                app_name,
+                install_location,
+                None,
+                art_url,
+                defs.TAG_EPIC,
+                icon
+            )
+        )
+    return games
 
 def egs_collect_games(egs_manifest_path):
     """

@@ -28,10 +28,11 @@ class GameDefinition:
         launch_arguments,
         art_url,
         storetag,
+        icon = None
     ):
         self.app_name = app_name
         self.executable_path = executable_path
-        self.icon = executable_path
+        self.icon = icon or executable_path
         self.display_name = display_name
         self.install_folder = install_folder
         self.launch_arguments = launch_arguments

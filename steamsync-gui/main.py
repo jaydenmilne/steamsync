@@ -38,11 +38,12 @@ class LocationPicker(wx.Frame):
             dialog.ShowModal()
 
         # check egs
+        legendaryPath = self.egsLocation.GetPath()
         egsPath = self.egsLocation.GetPath()
         manifests = os.path.join(egsPath, "Data", "Manifests")
-        if not os.path.exists(egsPath):
-            error = f"The path `{egsPath}` does not seem to exist"
-        elif not os.path.exists(manifests):
+        if not (os.path.exists(legendaryPath) or os.path.exists(egsPath)):
+            error = f"The path `{legendaryPath or egsPath}` does not seem to exist"
+        elif os.path.exists(egsPath) and not os.path.exists(manifests):
             error = f"The path `{manifests}` does not exist, is that actually an epic games store install directory?"
 
         if error:
@@ -60,7 +61,7 @@ class LocationPicker(wx.Frame):
         print("steampath", steamPath)
         print("manifestPath", manifests)
 
-        self.mainFrame = MainFrame(steamPath, manifests)
+        self.mainFrame = MainFrame(steamPath, manifests, legendaryPath)
         self.mainFrame.Show()
         self.Destroy()
         pass
@@ -83,6 +84,11 @@ class LocationPicker(wx.Frame):
             self.pnl, path="C:\\ProgramData\\Epic\\EpicGamesLauncher"
         )
 
+        legendarytT = wx.StaticText(self.pnl, label="Epic Games Store installation:")
+        self.legendaryLocation = wx.DirPickerCtrl(
+            self.pnl, path=""
+        )
+
         nextButton = wx.Button(self.pnl, label="Next")
         nextButton.Bind(wx.EVT_BUTTON, self.next)
 
@@ -94,6 +100,8 @@ class LocationPicker(wx.Frame):
         sizer.AddSpacer(15)
         sizer.Add(egst, 0, flags)
         sizer.Add(self.egsLocation, 0, flags)
+        sizer.Add(legendarytT, 0, flags)
+        sizer.Add(self.legendaryLocation, 0, flags)
         sizer.AddSpacer(15)
         sizer.Add(nextButton, 0, flags)
         sizer.AddSpacer(15)
@@ -197,7 +205,7 @@ class MainFrame(wx.Frame):
     def selectNone(self, event):
         self.checkListBox.SetCheckedItems([])
 
-    def __init__(self, steam_path, manifests):
+    def __init__(self, steam_path, manifests, legendaryPath):
         super(MainFrame, self).__init__(
             None, title=SLUG + "Select Games", size=(600, 1000)
         )
@@ -225,7 +233,11 @@ class MainFrame(wx.Frame):
             label="Shortcut Path Mode",
         )
 
-        self.allGames = steamsync.egs_collect_games(manifests)
+        if legendaryPath:
+            # TODO: Get user input if they want art
+            self.allGames = steamsync.egs_collect_games(legendaryPath, True)
+        else:
+            self.allGames = steamsync.egs_collect_games(manifests)
         self.checkListBox = wx.CheckListBox(
             self.pnl,
             id=wx.ID_ANY,

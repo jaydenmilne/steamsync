@@ -1,6 +1,6 @@
 import os
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 filename = f"steamsync-{VERSION}.exe"
 
 os.system(
