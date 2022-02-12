@@ -234,8 +234,7 @@ class MainFrame(wx.Frame):
         )
 
         if legendaryPath:
-            # TODO: Get user input if they want art
-            self.allGames = steamsync.egs_collect_games(legendaryPath, True)
+            self.allGames = steamsync.egs_collect_games(legendaryPath)
         else:
             self.allGames = steamsync.egs_collect_games(manifests)
         self.checkListBox = wx.CheckListBox(

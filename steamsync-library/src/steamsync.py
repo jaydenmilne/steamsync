@@ -127,20 +127,19 @@ def parse_arguments():
         args.download_art = True
     return args
 
-def legendary_collect_games(executable_cmd, with_art = False):
+def legendary_collect_games(executable_cmd):
     """
     Returns an array of GameDefinitions of all the installed EGS games that 'legendary' knows about
     """
     games_dict = {}
-    if with_art:
-        # populate info for all installable games
-        games_raw_json = subprocess.Popen([executable_cmd, "list-games", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
-        games_json = json.loads(games_raw_json)
-        for entry in games_json:
-            # TODO: Map other useful information, like tags?
-            games_dict[entry['app_name']] = {
-                'art': entry['metadata']['keyImages'][0]
-            }
+    # populate info for all installable games
+    games_raw_json = subprocess.Popen([executable_cmd, "list-games", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
+    games_json = json.loads(games_raw_json)
+    for entry in games_json:
+        # TODO: Map other useful information, like tags?
+        games_dict[entry['app_name']] = {
+            'art': entry['metadata']['keyImages'][0]
+        }
     games = list()
     raw_json = subprocess.Popen([executable_cmd, "list-installed", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
     parsed_json = json.loads(raw_json)
@@ -160,7 +159,7 @@ def legendary_collect_games(executable_cmd, with_art = False):
                 display_name,
                 app_name,
                 install_location,
-                None,
+                "",
                 art_url,
                 defs.TAG_EPIC,
                 icon
@@ -591,6 +590,8 @@ def remove_missing_games_from_shortcut_file(
 def main():
     args = parse_arguments()
     games = []
+    if defs.TAG_LEGENDARY in args.source:
+        games += legendary_collect_games(args.legendary_command)
     if defs.TAG_EPIC in args.source:
         games += egs_collect_games(args.egs_manifests)
     if defs.TAG_ITCH in args.source:

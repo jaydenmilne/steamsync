@@ -3,10 +3,12 @@
 import os
 from pathlib import Path
 
+TAG_LEGENDARY = "legendary"
 TAG_EPIC = "epicstore"
 TAG_ITCH = "itchio"
 TAG_XBOX = "xbox"
 TAGS = [
+    TAG_LEGENDARY,
     TAG_EPIC,
     TAG_ITCH,
     TAG_XBOX,
