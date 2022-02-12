@@ -84,7 +84,7 @@ class LocationPicker(wx.Frame):
             self.pnl, path="C:\\ProgramData\\Epic\\EpicGamesLauncher"
         )
 
-        legendarytT = wx.StaticText(self.pnl, label="Epic Games Store installation:")
+        legendarytT = wx.StaticText(self.pnl, label="Legendary command/executable path:")
         self.legendaryLocation = wx.DirPickerCtrl(
             self.pnl, path=""
         )
