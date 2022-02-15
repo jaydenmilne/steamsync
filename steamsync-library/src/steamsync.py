@@ -21,8 +21,6 @@ def get_default_steam_path():
         return os.path.expanduser('~') + '/.steam/steam'
     return "C:\\Program Files (x86)\\Steam"
 
-DEFAULT_STEAM_PATH = get_default_steam_path()
-
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Utility to import games from the Epic Games Store, Microsoft Store (Xbox for Windows), and itch.io to your Steam library",
@@ -61,7 +59,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--steam-path",
-        default=DEFAULT_STEAM_PATH,
+        default=get_default_steam_path(),
         help="Path to Steam installation",
         required=False,
     )
