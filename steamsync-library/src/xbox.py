@@ -72,17 +72,22 @@ def xbox_collect_games():
     xbox_collect_games() -> List[GameDefinition]
     """
     games = []
+    applist = []
 
     print("\nScanning Xbox library...")
     # Run string instead of scriptfile to circumvent powershell ExecutionPolicy
     # ("cannot be loaded because running scripts is disabled on this system").
     script = Path(__file__).resolve().parent / "list_xbox_games.ps1"
-    with script.open("r", encoding="utf-8") as f:
-        script_code = "".join(f.readlines())
-    output = subprocess.check_output(
-        ["powershell.exe", str(script_code)], universal_newlines=True
-    )
-    applist = json.loads(output)
+    try:
+        with script.open("r", encoding="utf-8") as f:
+            script_code = "".join(f.readlines())
+        output = subprocess.check_output(
+            ["powershell.exe", str(script_code)], universal_newlines=True
+        )
+        applist = json.loads(output)
+    except FileNotFoundError:
+        print("Couldn't find PowerShell executable, skipping collecting Xbox games.")
+        return []
 
     for app in applist:
         args = ""

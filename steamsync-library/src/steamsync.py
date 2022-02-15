@@ -4,16 +4,24 @@ import argparse
 import json
 import os
 import time
-import subprocess
+import platform
 from pathlib import Path
 
+import appdirs
 import vdf
 
 import defs
 import steameditor
 from itch import itch_collect_games
 from xbox import xbox_collect_games
+from legendary import legendary_collect_games
 
+def get_default_steam_path():
+    if platform.system() == 'Linux':
+        return os.path.expanduser('~') + '/.steam/steam'
+    return "C:\\Program Files (x86)\\Steam"
+
+DEFAULT_STEAM_PATH = get_default_steam_path()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -39,20 +47,21 @@ def parse_arguments():
 
     parser.add_argument(
         "--legendary-command",
-        help="Command to run 'legendary' executable",
+        help="Command/Path to run 'legendary' executable",
+        default="legendary",
         required=False,
     )
 
     parser.add_argument(
         "--itch-library",
-        default=os.path.expandvars("$APPDATA/itch/apps"),
+        default=os.path.join(appdirs.user_config_dir("itch"), "apps"),
         help="Path where the itch.io app installs games",
         required=False,
     )
 
     parser.add_argument(
         "--steam-path",
-        default="C:\\Program Files (x86)\\Steam",
+        default=DEFAULT_STEAM_PATH,
         help="Path to Steam installation",
         required=False,
     )
@@ -120,52 +129,20 @@ def parse_arguments():
         required=False,
     )
 
+    parser.add_argument(
+        "--init-shortcuts-file",
+        default=False,
+        action="store_true",
+        help="Initialize Steam shortcuts.vdf file if it doesn't exist. EXPERIMENTAL!!",
+        required=False,
+    )
+
     args = parser.parse_args()
     if not args.source:
         args.source = defs.TAGS
     if args.download_art_all_shortcuts:
         args.download_art = True
     return args
-
-def legendary_collect_games(executable_cmd):
-    """
-    Returns an array of GameDefinitions of all the installed EGS games that 'legendary' knows about
-    """
-    games_dict = {}
-    # populate info for all installable games
-    games_raw_json = subprocess.Popen([executable_cmd, "list-games", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
-    games_json = json.loads(games_raw_json)
-    for entry in games_json:
-        # TODO: Map other useful information, like tags?
-        games_dict[entry['app_name']] = {
-            'art': entry['metadata']['keyImages'][0]
-        }
-    games = list()
-    raw_json = subprocess.Popen([executable_cmd, "list-installed", "--json"], stdout=subprocess.PIPE).communicate()[0].decode()
-    parsed_json = json.loads(raw_json)
-    for entry in parsed_json:
-        app_name = entry['app_name']
-        executable_path = executable_cmd + ' launch ' + app_name
-        display_name = entry['title']
-        install_location = entry['install_path']
-        art_url = None
-        icon = os.path.join(install_location, entry['executable'])
-        if app_name in games_dict:
-             art_url = games_dict[app_name]['art']
-
-        games.append(
-            defs.GameDefinition(
-                executable_path,
-                display_name,
-                app_name,
-                install_location,
-                "",
-                art_url,
-                defs.TAG_EPIC,
-                icon
-            )
-        )
-    return games
 
 def egs_collect_games(egs_manifest_path):
     """
@@ -616,7 +593,7 @@ def main():
     try:
         steamdb = steameditor.SteamDatabase(
             args.steam_path,
-            os.path.expandvars("$LOCALAPPDATA/steamsync/cache"),
+            appdirs.user_cache_dir("steamsync"),
             args.use_uri,
         )
         accounts = steamdb.enumerate_steam_accounts()
@@ -682,14 +659,16 @@ def main():
         steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
     )
 
-    if not os.path.exists(shortcut_file_path):
-        message = f"Could not find shortcuts file at `{shortcut_file_path}` \n Make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. Aborting."
+    if not os.path.exists(shortcut_file_path) and not args.init_shortcuts_file:
+        message = f"Could not find shortcuts file at `{shortcut_file_path}`\nEither make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.\nOr enable option to initialize shortcuts  file. (--init-shortcuts-file)\nAborting."
         print(message)
         return 1
-
-    # read in the shortcuts file
-    with open(shortcut_file_path, "rb") as sf:
-        shortcuts = vdf.binary_load(sf)
+    elif args.init_shortcuts_file:
+        shortcuts = {'shortcuts': {}}
+    else:
+        # read in the shortcuts file
+        with open(shortcut_file_path, "rb") as sf:
+            shortcuts = vdf.binary_load(sf)
 
     should_write_vdf = False
     if args.remove_missing:
@@ -717,7 +696,7 @@ def main():
         if args.live_dangerously:
             print("Not backing up `shortcuts.vdf` since you enjoy danger")
             os.remove(shortcut_file_path)
-        else:
+        elif os.path.exists(shortcut_file_path):
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             new_filename = shortcut_file_path + f"-{timestamp}.bak"
 
@@ -728,7 +707,7 @@ def main():
         with open(shortcut_file_path, "wb") as shortcut_file:
             shortcut_file.write(new_bytes)
 
-        print("Updated `shortcuts.vdf` successfully!")
+        print("Wrote `shortcuts.vdf` successfully!")
         print()
         print("➡   Restart Steam!")
 
