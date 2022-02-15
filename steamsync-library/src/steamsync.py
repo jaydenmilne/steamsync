@@ -52,7 +52,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--itch-library",
-        default=os.path.join(appdirs.user_config_dir("itch"), "apps"),
+        default=os.path.join(appdirs.user_config_dir("itch", roaming=True), "apps"),
         help="Path where the itch.io app installs games",
         required=False,
     )
