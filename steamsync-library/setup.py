@@ -1,9 +1,9 @@
-import setuptools
+from setuptools import setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="steamsync",
     version="0.2.5",
     author="Jayden Milne",
@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/jaydenmilne/steamsync",
-    packages=setuptools.find_packages("src"),
+    #packages=["*"],
     package_dir={"": "src"},
     classifiers=[
         "Operating System :: Microsoft :: Windows",
@@ -22,5 +22,5 @@ setuptools.setup(
     ],
     install_requires=["vdf>=3,<4"],
     scripts=["src/steamsync.py"],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )

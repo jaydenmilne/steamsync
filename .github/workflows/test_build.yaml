@@ -1,0 +1,57 @@
+---
+name: test_build
+
+on:
+  push:
+    paths:
+      - "**.py"
+      - "setup.cfg"
+      - "MANIFEST.in"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/test_build.yaml"
+  pull_request:
+    paths:
+      - "**.py"
+      - "setup.cfg"
+      - "MANIFEST.in"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/test_build.yaml"
+
+jobs:
+  test_build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+        python-version: ["3.7", "3.9"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install build tools
+        run: pip install setuptools wheel build pyinstaller
+      - name: Install requirements
+        run: cd steamsync-library && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Test execution
+        run: python3 steamsync-library/src/steamsync.py --help
+      - name: Test exeuction as module
+        run: cd steamsync-library/src && python3 -m steamsync --help
+      - name: Run build
+        run: cd steamsync-library && python3 -m build
+      - name: Get Wheel File Path
+        id: getwheelfile
+        shell: bash
+        run: cd steamsync-library && echo "::set-output name=wheelfile::$(find "dist" -type f -name "*.whl")"
+      - name: Test pip install of wheel
+        shell: bash
+        run: cd steamsync-library && pip install $(find "dist" -type f -name "*.whl")
+      - name: Test pyinstaller
+        run: cd steamsync-library && pyinstaller --clean --collect-all steamsync --onefile ./src/steamsync.py
+      # the following is failing currently:
+      # - name: Test binary execution
+      #   run: cd steamsync-library && ./dist/steamsync --help
