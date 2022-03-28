@@ -3,10 +3,12 @@
 import os
 from pathlib import Path
 
+TAG_LEGENDARY = "legendary"
 TAG_EPIC = "epicstore"
 TAG_ITCH = "itchio"
 TAG_XBOX = "xbox"
 TAGS = [
+    TAG_LEGENDARY,
     TAG_EPIC,
     TAG_ITCH,
     TAG_XBOX,
@@ -28,10 +30,11 @@ class GameDefinition:
         launch_arguments,
         art_url,
         storetag,
+        icon = None
     ):
         self.app_name = app_name
         self.executable_path = executable_path
-        self.icon = executable_path
+        self.icon = icon or executable_path
         self.display_name = display_name
         self.install_folder = install_folder
         self.launch_arguments = launch_arguments
