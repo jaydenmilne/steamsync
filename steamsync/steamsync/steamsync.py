@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import sys
 import time
 import platform
 from pathlib import Path
@@ -10,16 +11,20 @@ from pathlib import Path
 import appdirs
 import vdf
 
-import defs
-import steameditor
-from itch import itch_collect_games
-from xbox import xbox_collect_games
-from legendary import legendary_collect_games
+import steamsync.defs as defs
+from steamsync.launchers.egs import EpicGamesStoreLauncher
+from steamsync.launchers.launcher import Launcher
+import steamsync.steameditor as steameditor
+from steamsync.launchers.itch import ItchLauncher
+from steamsync.launchers.xbox import XboxLauncher
+from steamsync.launchers.legendary import LegendaryLauncher
+
 
 def get_default_steam_path():
-    if platform.system() == 'Linux':
-        return os.path.expanduser('~') + '/.steam/steam'
+    if platform.system() == "Linux":
+        return os.path.expanduser("~") + "/.steam/steam"
     return "C:\\Program Files (x86)\\Steam"
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -142,97 +147,6 @@ def parse_arguments():
         args.download_art = True
     return args
 
-def egs_collect_games(egs_manifest_path):
-    """
-    Returns an array of GameDefinitions of all the installed EGS games
-    """
-    print(f"\nScanning EGS manifest store ({egs_manifest_path})...")
-    # loop over every .item fiile
-    pathlist = Path(egs_manifest_path).glob("*.item")
-    games = list()
-
-    for path in pathlist:
-        # EGS seems to write their json files out as utf-8
-        with open(path, "r", encoding="utf-8") as f:
-            item = json.load(f)
-
-            app_name = path
-            display_name = path
-
-            if "AppName" in item:
-                app_name = item["AppName"]
-            if "DisplayName" in item:
-                display_name = item["DisplayName"]
-
-            if item["bIsIncompleteInstall"]:
-                print(f"\t- Skipping '{display_name}' since installation is incomplete")
-                continue
-            elif not item["bIsApplication"]:
-                print(f"\t- Skipping '{display_name}' since it isn't an application")
-                continue
-            elif "games" not in item["AppCategories"]:
-                print(
-                    f"\t- Skipping '{display_name}' since it doesn't have the category 'games'"
-                )
-                continue
-
-            if "InstallLocation" not in item:
-                print(
-                    f"\t- Skipping '{display_name}' since it apparently doesn't have an 'InstallLocation'"
-                )
-                continue
-
-            install_location = os.path.normpath(item["InstallLocation"])
-
-            if "LaunchExecutable" not in item:
-                print(
-                    f"\t- Skipping '{display_name}' since it apparently doesn't have an executable"
-                )
-                continue
-
-            if "LaunchCommand" not in item:
-                print(f"\t- '{display_name}' doesn't have LaunchCommands?")
-                launch_arguments = ""
-            else:
-                # I think this is for command line arguments...?
-                launch_arguments = item["LaunchCommand"]
-
-            launch_executable = os.path.normpath(item["LaunchExecutable"])
-
-            if launch_executable[0] in "/\\":
-                # Sanitize bad paths. RiME uses
-                # "/RiME/SirenGame/Binaries/Win64/RiME.exe", which looks
-                # absolute but it isn't.
-                launch_executable = launch_executable[1:]
-
-            executable_path = os.path.join(install_location, launch_executable)
-
-            # found by looking creating a shortcut on the desktop in the EGL and inspecting it
-            # using the URI instead of executable_path allows some games with online services
-            # to work (eg GTAV)
-
-            if not os.path.exists(executable_path):
-                print(
-                    f"\t- Warning: path `{executable_path}` does not exist for game {display_name}, skipping!"
-                )
-                continue
-
-            games.append(
-                defs.GameDefinition(
-                    executable_path,
-                    display_name,
-                    app_name,
-                    install_location,
-                    launch_arguments,
-                    None,
-                    defs.TAG_EPIC,
-                )
-            )
-
-    print(f"Collected {len(games)} games from the EGS manifest store")
-    games.sort()
-    return games
-
 
 def print_games(games, use_uri):
     """
@@ -249,7 +163,7 @@ def print_games(games, use_uri):
                 game.display_name[:25],
                 game.storetag,
                 game.app_name[:45],
-                f"{exe} {launch_args}",
+                f"{exe} {launch_args}"[:256],
             )
         )
 
@@ -558,25 +472,108 @@ def remove_missing_games_from_shortcut_file(
     return (game_results, len(missing_shortcuts)), None
 
 
+def collect_all_games(args):
+    """Collect games from every enabled store"""
+    launchers: dict[str, Launcher] = {
+        defs.TAG_XBOX: XboxLauncher(),
+        defs.TAG_LEGENDARY: LegendaryLauncher(legendary_command=args.legendary_command),
+        defs.TAG_EPIC: EpicGamesStoreLauncher(egs_manifest_path=args.egs_manifests),
+        defs.TAG_ITCH: ItchLauncher(library_path=args.itch_library),
+    }
+
+    # remove launchers they didn't ask for
+    for l in list(launchers):
+        if l not in args.source:
+            del launchers[l]
+
+    games: list[defs.GameDefinition] = []
+
+    for l in launchers.values():
+        if not l.is_installed():
+            print(f"{l.get_display_name()} appears to not be installed")
+            continue
+        print(f"Collecting games from {l.get_display_name()}")
+
+        try:
+            games.extend(l.collect_games())
+        except Exception as e:
+            print(f"Unexpected failure collecting games from {l.get_display_name()}")
+            print(e)
+
+    return games
+
+
+def get_steam_user(
+    steamdb: steameditor.SteamDatabase, steam_path: str, provided_steamid: str
+):
+    try:
+        accounts_on_machine = steamdb.enumerate_steam_accounts()
+    except FileNotFoundError as e:
+        print(
+            f"Steam path not found: '{steam_path}'. Use --steam-path for non-standard installs.",
+        )
+        raise e
+
+    if len(accounts_on_machine) == 1 and provided_steamid != "":
+        print(
+            "FYI: There is only one Steam account found on your computer, so you don't need to provide --steamid"
+        )
+
+    numeric_steamid = None
+    if provided_steamid.isdigit():
+        # they gave us a numeric steam ID. Validate that is on the machine
+        numeric_steamid = next(
+            (
+                user.steamid
+                for user in accounts_on_machine
+                if user.steamid == provided_steamid
+            ),
+            None,
+        )
+
+        if numeric_steamid is None:
+            print(
+                f"The numeric --steamid you provided ({provided_steamid}) was not found on your computer. Pick from below"
+            )
+    elif provided_steamid != "":
+        # gave us a username
+        numeric_steamid = next(
+            (
+                user.steamid
+                for user in accounts_on_machine
+                if user.username == provided_steamid
+            ),
+            None,
+        )
+
+        if numeric_steamid is None:
+            print(
+                f"The username (--steamid) you provided ({provided_steamid}) was not found on your computer. Pick from below"
+            )
+
+    if numeric_steamid is None:
+        while not numeric_steamid:
+            numeric_steamid = prompt_for_steam_account(accounts_on_machine)
+
+    user = next(user for user in accounts_on_machine if user.steamid == numeric_steamid)
+    return user
+
+
 ####################################################################################################
 # Main
 
 
 def main():
     args = parse_arguments()
-    games = []
-    if defs.TAG_LEGENDARY in args.source:
-        games += legendary_collect_games(args.legendary_command)
-    if defs.TAG_EPIC in args.source:
-        games += egs_collect_games(args.egs_manifests)
-    if defs.TAG_ITCH in args.source:
-        games += itch_collect_games(args.itch_library)
-    if defs.TAG_XBOX in args.source:
-        games += xbox_collect_games()
-    print()
-    print_games(games, args.use_uri)
 
-    all_games = games
+    # 1. Collect all games from every enabled store
+    all_games = collect_all_games(args)
+
+    # 2. Print out the list of games we got
+    print_games(all_games, args.use_uri)
+
+    # 3. Have the user select the games they want
+    games = all_games
 
     if not args.all:
         picks = None
@@ -584,52 +581,17 @@ def main():
             picks = filter_games(games)
         games = picks
 
-    # add more GameDefinitions to games as needed...
+    # 4. Pick the account to add shortcuts to (if needed)
 
-    # Write shortcuts to steam!
-    steamid = args.steamid
-    try:
-        steamdb = steameditor.SteamDatabase(
-            args.steam_path,
-            appdirs.user_cache_dir("steamsync"),
-            args.use_uri,
-        )
-        accounts = steamdb.enumerate_steam_accounts()
-    except FileNotFoundError as e:
-        print(
-            f"Steam path not found: '{args.steam_path}'. Use --steam-path for non-standard installs.",
-            e,
-        )
-        return -1
+    steamdb = steameditor.SteamDatabase(
+        args.steam_path,
+        appdirs.user_cache_dir("steamsync"),
+        args.use_uri,
+    )
 
-    if len(accounts) == 1 and steamid != "":
-        print(
-            "FYI: There is only one Steam account found on your computer, so you don't need to provide --steamid"
-        )
+    user = get_steam_user(steamdb, args.steam_path, args.steamid)
 
-    # if they gave a username, find the steamid associated with it
-    if not steamid.isdigit() and steamid != "":
-        username = steamid
-        for account in accounts:
-            if username == account.username:
-                steamid = account.steamid
-        if username == steamid:
-            # bit hackish, triggers selection below if the username wasn't found
-            print("⚠ ⚠ WARNING: ⚠ ⚠")
-            print(f"SteamID for `{steamid}` not found!")
-            print("The SteamID you provided could not be found on your local machine.")
-            print(
-                "If you are providing the human readable name and not a numeric SteamID, make sure you spell it correctly"
-            )
-
-            steamid = ""
-
-    if steamid == "":
-        steamid = None
-        while not steamid:
-            steamid = prompt_for_steam_account(accounts)
-
-    user = next(user for user in accounts if user.steamid == steamid)
+    # 5. Write shortcuts to steam!
 
     if args.download_art:
         if args.download_art_all_shortcuts:
@@ -662,7 +624,7 @@ def main():
         print(message)
         return 1
     elif args.init_shortcuts_file:
-        shortcuts = {'shortcuts': {}}
+        shortcuts = {"shortcuts": {}}
     else:
         # read in the shortcuts file
         with open(shortcut_file_path, "rb") as sf:

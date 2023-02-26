@@ -11,6 +11,7 @@ PR!
 
 Eventually it would be nice to add other launchers, maybe?
 
+We use poetry for packaging. See the [poetry quickstart](https://python-poetry.org/docs/)
 
 ### TODO
 Feel free to work on any of these and remove them from the list / submit a PR

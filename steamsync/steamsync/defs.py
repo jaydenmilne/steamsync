@@ -30,7 +30,7 @@ class GameDefinition:
         launch_arguments,
         art_url,
         storetag,
-        icon = None
+        icon=None,
     ):
         self.app_name = app_name
         self.executable_path = executable_path

@@ -124,7 +124,6 @@ USE_PATH = "Use path to game (works best with Big Picture + Steam Input)"
 
 class MainFrame(wx.Frame):
     def add_shortcuts(self, event):
-
         checked = self.checkListBox.GetCheckedStrings()
         # this is a list of strings, we want to turn it into a list of games
         lookup = {x.display_name: x for x in self.allGames}
@@ -167,7 +166,6 @@ class MainFrame(wx.Frame):
         results, num = game_results_tuple
         game_results_str = f"Great success! Added {num} games"
         if len(results) != 0:
-
             for r in results:
                 game_results_str += f"\r\n{r}"
 

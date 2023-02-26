@@ -40,8 +40,7 @@ def _remove_accents(text):
 
 
 def _remove_punctuation(text):
-    """Remove punctuation character to make for easier comparisons.
-    """
+    """Remove punctuation character to make for easier comparisons."""
     return re.sub(r"[:;,.=+?]", "", text)
 
 
@@ -398,7 +397,9 @@ def _test():
     import pprint
 
     db = SteamDatabase(
-        "C:/Program Files (x86)/Steam", os.path.expandvars("$TEMP/steamsync"), prefer_uri=False
+        "C:/Program Files (x86)/Steam",
+        os.path.expandvars("$TEMP/steamsync"),
+        prefer_uri=False,
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])

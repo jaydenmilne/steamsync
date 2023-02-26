@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "steamsync"
+version = "0.4.0"
+description = "Tool to automatically add games from the Epic Games Launcher to Steam"
+authors = ["Jayden Milne <jaydenmilne@users.noreply.github.com>"]
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/jaydenmilne/steamsync"
+homepage = "https://github.com/jaydenmilne/steamsync"
+keywords = ["Steam", "Epic Games Store", "Big Picture Mode", "EGS"]
+classifiers = [
+        "Operating System :: Microsoft :: Windows",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+        "Topic :: Games/Entertainment",
+]
+
+include = ["steamsync/launchers/static/list_xbox_games.ps1"]
+
+[tool.poetry.scripts]
+steamsync = "steamsync.steamsync:main"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.28.2"
+toml = "^0.10.2"
+vdf = "^3.3"
+appdirs = "^1.4.4"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

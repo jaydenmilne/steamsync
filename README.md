@@ -1,75 +1,177 @@
 # steamsync
 
-steamsync is an app to import your Epic Games Store games into Steam as shortcuts,
-to allow you to use Remote Play and Steam Input with your EGS library.
+steamsync is a command line tool to add games from various launchers as steam
+shortcuts. It supports (to an extent):
 
-You can either use the app, described below, or the [CLI version](steamsync-library/README.md) 
-(available on PIP) if you are the ultimate hackerman.
+- The Epic Games Store (best)
+- Xbox games installed on Windows (limited)
+- itch.io
+- legendary (limited)
 
-Eventually, the goal is to support other launchers.
+It can also attempt to fetch art from the Steam catalog (`--download-art`)
 
-## Using The App
-### Installation
-Head over to [the latest release](https://github.com/jaydenmilne/steamsync/releases/latest) and 
-grab the latest `.exe`, and run it. There is no need to install anything.
+You can use it via:
+- The command line (detailed below, main target)
+- [A more user-friendly Windows application](steamsync-gui/README.md)
 
-### Usage
-1. Download & run the app
-2. Change the paths to your Steam installation and your Epic Games Store installation,
-   if needed.
-3. Press "Next"
-4. Select the Steam Account and path mode you want (if you're not sure, leave
-   the path mode at the default)
-5. Exit Steam
-6. Press "Add Shortcuts To Steam"
-7. ???
-8. Profit!
+## steamsync cli
+[![PyPI version](https://badge.fury.io/py/steamsync.svg)](https://badge.fury.io/py/steamsync)
 
-### Screenshots
-![screenshot-1](doc/img1.png)
-![screenshot-2](doc/img2.png)
+Simple command line tool (and poorly documented library!) to automatically add
+games from the Epic Games Launcher to Steam.
 
-It's beautiful, I know.
+Makes playing all of those free EGS games in Big Picture Mode a lot easier. In my experience,
+when launching from Big Picture Mode, Steam Input works as expected (even in Fortnite!).
+
+steamsync will scan all of the Epic Games Store games installed on your computer and
+add them to your Steam Library. If a shortcut with the same path already exists, it will
+skip it, so it's safe to import all of your games over and over.
+
+steamsync attempts to be simple. It does not attempt to fetch any banner art, it
+ simply uses the executable's icon as the icon in steam.
+
+### Installation (brief)
+Requires > Python 3.8
+
+```console
+$ pip install steamsync
+$ steamsync
+```
+
+## Installation and Usage (for beginners)
+
+1. [Download Python 3.8](https://www.python.org/downloads/)
+2. Choose the latest version of Python 3.8, and get the "Windows x86-64 executable installer" option
+3. When installing Python, make sure to install pip and to *add Python to your PATH*
+4. Open Commmand Prompt (search Start Menu for cmd.exe)
+5. Type `pip install steamsync`, press enter.
+6. Make sure Steam is not running!
+7. Type `steamsync.py`, press enter. The tool will walk you through everything else.
+   Press ctrl+c if you get scared and want to abort.
+
+## Usage
+```
+(steamsync-py3.10) PS C:\Users\jayde\Documents\GitHub\steamsync> steamsync -h  
+usage: steamsync [-h] [--source {legendary,epicstore,itchio,xbox}] 
+                      [--egs-manifests EGS_MANIFESTS] 
+                      [--legendary-command LEGENDARY_COMMAND] 
+                      [--itch-library ITCH_LIBRARY] 
+                      [--steam-path STEAM_PATH] 
+                      [--all] 
+                      [--replace-existing] 
+                      [--remove-missing] 
+                      [--live-dangerously] 
+                      [--steamid STEAMID] 
+                      [--use-uri]
+                      [--download-art] 
+                      [--download-art-all-shortcuts] 
+                      [--init-shortcuts-file]
+
+Utility to import games from the Epic Games Store, Microsoft Store (Xbox for 
+Windows), and itch.io to your Steam library
+
+options:
+  -h, --help            show this help message and exit
+  --source {legendary,epicstore,itchio,xbox}
+                        Storefronts with games to add to Steam. If unspecified, 
+                        uses all sources. Use argument multiple times to select 
+                        multiple sources (--source itchio --source xbox). 
+                        (default: None)
+  --egs-manifests EGS_MANIFESTS
+                        Path to search for Epic Games Store manifest files 
+                        (default: C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests)
+  --legendary-command LEGENDARY_COMMAND
+                        Command/Path to run 'legendary' executable 
+                        (default: legendary)
+  --itch-library ITCH_LIBRARY
+                        Path where the itch.io app installs games 
+                        (default: C:\Users\jayde\AppData\Roaming\itch\itch\apps)
+  --steam-path STEAM_PATH
+                        Path to Steam installation (default: C:\Program Files (x86)\Steam)
+  --all                 
+                        Install all games found, do not prompt user to select which 
+                        (default: False)
+  --replace-existing    
+                        Instead of skipping existing shortcuts (ones with the 
+                        same path), overwrite them with new data. Useful to 
+                        repair broken shortcuts. 
+                        (default: False)
+  --remove-missing      
+                        Remove shortcuts to games that no longer exist. Uses 
+                        selected sources to determine if games without executables 
+                        (uri or Xbox) still exist. i.e., if you don't include 
+                        xbox source all xbox games will appear to be missing. 
+                        (default: False)
+  --live-dangerously    
+                        Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak 
+                        (default: False)
+  --steamid STEAMID     SteamID or username to install the shortcuts to, only 
+                        needed if >1 accounts on this machine 
+                        (default: )
+  --use-uri             
+                        Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) 
+                        instead of the path to the executable (eg `C:\Fortnite\Fortnite.exe`). 
+                        Some games with online functionality (eg GTAV) require 
+                        being launched through the EGS. Other games work better with Steam      
+                        game streaming (eg Steam Link or Big Picture) using the path to the executable. 
+                        (default: False)
+  --download-art        
+                        Download Steam grid and Big Picture art from steam's 
+                        servers for games we're adding. Only downloads art that 
+                        we haven't already downloaded. 
+                        (default: False)
+  --download-art-all-shortcuts
+                        Download Steam grid and Big Picture art for all non-steam 
+                        game shortcuts. Only downloads art that we haven't already 
+                        downloaded. Implies --download-art 
+                        (default: False)
+  --init-shortcuts-file
+                        Initialize Steam shortcuts.vdf file if it doesn't exist.
+                        EXPERIMENTAL!! 
+                        (default: False)
+```
 
 ### FAQ
-#### It doesn't work! / I can't get it to work!
-[Open an issue on GitHub.](https://github.com/jaydenmilne/steamsync/issues)
+#### Does this work on OSX?
+Probably not. You may have luck with `--egs-manifests` and `--steam-path`, maybe
+MRs are welcome
+
+#### What about Linux?
+When using [Legendary](https://github.com/derrod/legendary) or [Heroic](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher) steamsync should work.
+Use `--legendary-command` option to path to correct binary if not already in `PATH`.
+Not tested with [Rare](https://github.com/Dummerle/Rare)
+Not tested with EGS running through Wine.
+
+#### It doesn't work!
+Open an issue on GitHub.
 
 #### Steam crashed after opening my library the first time, but worked after that
-I think this has to do with importing all of the icons. Let Steam think and do 
-its thing, eventually it will start responding again.
-
-### What type of paths do I want?
-
-You can either use the path to the game 
-(eg `G:\Epic Games\RiME\RiME\SirenGame\Binaries\Win64\RiME.exe`) or use a URI 
-to launch the game (`com.epicgames.launcher://apps/Hydrangea?action=launch&silent=true`).
-
-Using the path is best when you want to do Remote Play and Steam Input.
-
-The URI is required for some online games (eg GTAV) to work. This interferes with
-Remote Play and Steam Input, however.
-
-### I can't launch GTAV!
-
-Use the "URI" option to import, see above.
+Weird, right? Mine did that too ¯\\_(ツ)_/¯. Maybe loading 52 shortcuts at once
+was too much for it.
 
 #### I want to go back to the way it was
 steamsync will backup your `shortcuts.vdf` file by default every time you run it.
 
 Go to `C:\Program Files (x86)\Steam\userdata\{your steam userid}\config`. You will see some
 `shortcuts.vdf-DATE.bak` files. Delete `shortcuts.vdf` (this is the one steamsync modified),
-and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam. 
+and rename the `.bak` file you want to use to `shortcuts.vdf`, restart steam.
 
 #### I got a `could not find shortcuts file at ...` error
-Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first. 
-steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
+Try making a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.
+By default steamsync will not make a `shortcuts.vdf` file for you if it isn't already there.
+You can enable the experimental functionality for automatically initializing the
+`shortcuts.vdf` file with the `--init-shortcuts-file` option.
 
+#### Can this run automagically?
+Yes, yes it can! (you may need to adjust paths below)
 
-## Contributing
+1. Open Task Scheduler (start + type "task...")
+2. Action Menu ➡ Create Basic Task
+3. Fill in a name and description
+4. Set the trigger you want to use (daily, log in, etc), Next
+5. Action = Start a Program
+6. Program/Script is `pythonw`
+7. Add arguments `C:\Users\{username}\AppData\Local\Programs\Python\Python38\Scripts\steamsync.py --all --steamid={steam id}`, Next
+8. Make sure to restart Steam once in a while
 
-I welcome any PRs or suggestions on how to do better! The GUI is a mess, so if 
-anyone wants to tidy up the layout or code, be my guest. Contributions are
-licensed under the AGPLv3 license.
-
-One major feature I want to add is support for other launchers (Origin, Battle.NET, UPlay)
+TADA!

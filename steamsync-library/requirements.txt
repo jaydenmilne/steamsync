@@ -1,4 +1,0 @@
-﻿requests>=2.25.1
-toml>=0.10.2
-vdf==3.3
-appdirs==1.4.4
