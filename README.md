@@ -12,7 +12,7 @@ It can also attempt to fetch art from the Steam catalog (`--download-art`)
 
 You can use it via:
 - [The command line, via pip](steamsync/README.md)
-- [A more user-friendly Windows application](steamsync-gui/README.md)
+- [A more user-friendly but out of date Windows application](steamsync-gui/README.md)
 
 ## TL;DR
 
