@@ -1,23 +1,21 @@
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
 import argparse
-import json
 import os
-import sys
-import time
 import platform
+import time
 from pathlib import Path
 
 import appdirs
 import vdf
 
 import steamsync.defs as defs
-from steamsync.launchers.egs import EpicGamesStoreLauncher
-from steamsync.launchers.launcher import Launcher
 import steamsync.steameditor as steameditor
+from steamsync.launchers.egs import EpicGamesStoreLauncher
 from steamsync.launchers.itch import ItchLauncher
-from steamsync.launchers.xbox import XboxLauncher
+from steamsync.launchers.launcher import Launcher
 from steamsync.launchers.legendary import LegendaryLauncher
+from steamsync.launchers.xbox import XboxLauncher
 
 
 def get_default_steam_path():
