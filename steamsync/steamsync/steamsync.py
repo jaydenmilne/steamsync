@@ -241,6 +241,7 @@ def to_shortcut(game, use_uri):
 
     return {
         "appname": game.display_name,
+        "appid": game.get_shortcut_id_signed(),
         "Exe": shortcut,
         "StartDir": game.install_folder,
         "icon": game.icon,
@@ -329,17 +330,18 @@ def add_games_to_shortcut_file(
         # Include args to handle mulitple explorer.exe options for xbox.
         path = f"{exe}|{launch_args}"
         path_to_index[path] = k
-        appname = v.get("appname")
         if download_art_unsupported and exe not in supported_games:
+            appname = v.get("appname")
             # Create a temp definition to specify info required to download.
             game = defs.GameDefinition(
                 exe,
                 appname,
-                "no-appid",  # v["appid"] doesn't already exist and don't do anything with it anyway
+                appname,  # No alternative name.
                 str(Path(exe).parent),
                 "",
                 None,
                 "ignore tag",
+                shortcut_id=v.get("appid"),  # may not exist yet
             )
             success = steamdb.download_art(user, game, should_replace_existing=False)
             if success:
@@ -369,8 +371,11 @@ def add_games_to_shortcut_file(
             path = f"{game.executable_path}|"
             i = path_to_index.get(path, None)
         if i:
+            old_shortcut = shortcuts["shortcuts"][i]
+            # Preserve the appid stored in shortcuts so existing art still
+            # matches. (Steam generates these ids if we don't assign them.)
+            game.shortcut_id = old_shortcut.get("appid")
             if replace_existing:
-                old_shortcut = shortcuts["shortcuts"][i]
                 new_shortcut = to_shortcut(game, use_uri)
                 print(
                     f"Replacing {old_shortcut['appname']} ({get_exe_from_shortcut(old_shortcut)} {old_shortcut.get('LaunchOptions', '')})\n     with {new_shortcut['appname']} ({get_exe_from_shortcut(new_shortcut)} {new_shortcut.get('LaunchOptions', '')})"
@@ -591,26 +596,6 @@ def main():
 
     # 5. Write shortcuts to steam!
 
-    if args.download_art:
-        if args.download_art_all_shortcuts:
-            get_art_for_games = all_games
-            print("\nDownloading art for all detected games...")
-        else:
-            get_art_for_games = games
-            print("\nDownloading art for selected games...")
-
-        if args.replace_existing:
-            # We don't have an argument for replacing art and replacing
-            # shortcuts is pretty different, so explain the better path.
-            print(
-                f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
-            )
-        count = steamdb.download_art_multiple(
-            user, get_art_for_games, should_replace_existing=False
-        )
-        print(f"Downloaded new art for {count} games.")
-        print()
-
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
 
     shortcut_file_path = os.path.join(
@@ -648,6 +633,28 @@ def main():
         args.download_art_all_shortcuts,
     )
     should_write_vdf |= result is not None
+
+    # Steam stores shortcut ids in shortcuts.vdf, so we can't download art
+    # until after merging new games into shortcuts.
+    if args.download_art:
+        if args.download_art_all_shortcuts:
+            get_art_for_games = all_games
+            print("\nDownloading art for all detected games...")
+        else:
+            get_art_for_games = games
+            print("\nDownloading art for selected games...")
+
+        if args.replace_existing:
+            # We don't have an argument for replacing art and replacing
+            # shortcuts is pretty different, so explain the better path.
+            print(
+                f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
+            )
+        count = steamdb.download_art_multiple(
+            user, get_art_for_games, should_replace_existing=False
+        )
+        print(f"Downloaded new art for {count} games.")
+        print()
 
     if should_write_vdf:
         print()
