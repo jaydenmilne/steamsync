@@ -210,6 +210,10 @@ class SteamDatabase:
                 if appid:
                     break
         if not appid:
+            # For: "Death's Door Win10" -> "Death's Door"
+            stripped = re.sub(r" win10\b", "", name, 1)
+            appid = name_to_id.get(stripped)
+        if not appid:
             # For: "Yakuza Kiwami (PC)" -> "Yakuza Kiwami"
             stripped = re_remove_braces.sub("", name, 1)
             appid = name_to_id.get(stripped)
@@ -403,7 +407,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "Raji An Ancient Epic"
+    game_name = "Death's Door Win10"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
