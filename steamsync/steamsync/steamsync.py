@@ -3,6 +3,7 @@
 import argparse
 import os
 import platform
+import pprint
 import time
 from pathlib import Path
 
@@ -135,6 +136,14 @@ def parse_arguments():
         default=False,
         action="store_true",
         help="Initialize Steam shortcuts.vdf file if it doesn't exist. EXPERIMENTAL!!",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--dump-shortcut-vdf",
+        default=False,
+        action="store_true",
+        help="For debugging. Print the Steam shortcuts.vdf as text and exit.",
         required=False,
     )
 
@@ -566,8 +575,42 @@ def get_steam_user(
 # Main
 
 
+def _load_shortcuts(shortcut_file_path, can_init_on_missing):
+    """Load the user's shortcuts.vdf file.
+
+    _load_shortcuts(str, bool) -> dict, str
+    """
+    if not os.path.exists(shortcut_file_path) and not can_init_on_missing:
+        message = f"Could not find shortcuts file at `{shortcut_file_path}`\nEither make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.\nOr enable option to initialize shortcuts  file. (--init-shortcuts-file)\nAborting."
+        print(message)
+        return
+    elif can_init_on_missing:
+        shortcuts = {"shortcuts": {}}
+    else:
+        # read in the shortcuts file
+        with open(shortcut_file_path, "rb") as sf:
+            shortcuts = vdf.binary_load(sf)
+
+    return shortcuts
+
+
 def main():
     args = parse_arguments()
+
+    steamdb = steameditor.SteamDatabase(
+        args.steam_path,
+        appdirs.user_cache_dir("steamsync"),
+        args.use_uri,
+    )
+
+    if args.dump_shortcut_vdf:
+        # Do this early to avoid showing game list.
+        user = get_steam_user(steamdb, args.steam_path, args.steamid)
+        shortcut_file_path = user.get_shortcut_filepath(steamdb._steam_path)
+        shortcuts = _load_shortcuts(shortcut_file_path, args.init_shortcuts_file)
+        print("Contents of", shortcut_file_path)
+        pprint.pprint(shortcuts)
+        return 0
 
     # 1. Collect all games from every enabled store
     all_games = collect_all_games(args)
@@ -585,33 +628,16 @@ def main():
         games = picks
 
     # 4. Pick the account to add shortcuts to (if needed)
-
-    steamdb = steameditor.SteamDatabase(
-        args.steam_path,
-        appdirs.user_cache_dir("steamsync"),
-        args.use_uri,
-    )
-
     user = get_steam_user(steamdb, args.steam_path, args.steamid)
 
     # 5. Write shortcuts to steam!
 
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
 
-    shortcut_file_path = os.path.join(
-        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
-    )
-
-    if not os.path.exists(shortcut_file_path) and not args.init_shortcuts_file:
-        message = f"Could not find shortcuts file at `{shortcut_file_path}`\nEither make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.\nOr enable option to initialize shortcuts  file. (--init-shortcuts-file)\nAborting."
-        print(message)
+    shortcut_file_path = user.get_shortcut_filepath(steamdb._steam_path)
+    shortcuts = _load_shortcuts(shortcut_file_path, args.init_shortcuts_file)
+    if not shortcuts:
         return 1
-    elif args.init_shortcuts_file:
-        shortcuts = {"shortcuts": {}}
-    else:
-        # read in the shortcuts file
-        with open(shortcut_file_path, "rb") as sf:
-            shortcuts = vdf.binary_load(sf)
 
     should_write_vdf = False
     if args.remove_missing:

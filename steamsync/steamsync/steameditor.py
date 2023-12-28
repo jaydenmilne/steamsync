@@ -58,6 +58,11 @@ class SteamAccount:
     def get_user_folder(self, steam_folder):
         return f"{steam_folder}/userdata/{self.steamid}"
 
+    def get_shortcut_filepath(self, steam_folder):
+        return os.path.join(
+            steam_folder, "userdata", self.steamid, "config/shortcuts.vdf"
+        )
+
 
 class SteamDatabase:
 
