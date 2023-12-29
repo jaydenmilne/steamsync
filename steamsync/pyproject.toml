@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "steamsync"
-version = "0.4.1"
+version = "0.4.2"
 description = "Tool to automatically add games from the Epic Games Launcher to Steam"
 authors = ["Jayden Milne <jaydenmilne@users.noreply.github.com>"]
 readme = "README.md"
