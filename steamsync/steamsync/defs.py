@@ -1,5 +1,7 @@
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
+import binascii
+import ctypes
 import os
 from pathlib import Path
 
@@ -13,6 +15,20 @@ TAGS = [
     TAG_ITCH,
     TAG_XBOX,
 ]
+
+
+def _get_steam_shortcut_id(exe, appname):
+    """Generate a short id for non-steam shortcut.
+
+    _get_steam_shortcut_id(str, str) -> int
+    """
+    # This is the old method that steamgrid used, but now steam stores the id
+    # in shortcuts.vdf. Keep this around to populate new shortcuts.
+    # https://github.com/boppreh/steamgrid/blob/c796e612c67925413317f4012bdc771326f173c8/games.go#L100-L137
+    unique_id = "".join([exe, appname])
+    id_int = binascii.crc32(str.encode(unique_id)) | 0x80000000
+    signed = ctypes.c_int(id_int)
+    return signed.value
 
 
 class GameDefinition:
@@ -30,9 +46,11 @@ class GameDefinition:
         launch_arguments,
         art_url,
         storetag,
+        shortcut_id=None,
         icon=None,
     ):
         self.app_name = app_name
+        self.shortcut_id = shortcut_id
         self.executable_path = executable_path
         self.icon = icon or executable_path
         self.display_name = display_name
@@ -68,3 +86,27 @@ class GameDefinition:
         elif use_uri and self.uri:
             exe = self.uri
         return exe, args
+
+    def get_shortcut_id_signed(self):
+        """Get the "appid" for the shortcut as a signed int.
+
+        If it doesn't already exist, we'll generate it with the old algorithm
+        so we can inject it into shortcuts.vdf and be able to assign art on
+        creation.
+
+        get_shortcut_id_signed() -> str
+        """
+        if self.shortcut_id:
+            return self.shortcut_id
+        else:
+            # Generate at the last second so we can always tell whether it came
+            # from shortcuts.vdf.
+            return _get_steam_shortcut_id(self.executable_path, self.app_name)
+
+    def get_shortcut_id_unsigned(self):
+        """Get the "appid" for the shortcut as an unsigned int.
+
+        get_shortcut_id_unsigned() -> str
+        """
+        unsigned = ctypes.c_uint(self.get_shortcut_id_signed())
+        return unsigned.value

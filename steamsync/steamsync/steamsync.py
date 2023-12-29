@@ -1,23 +1,22 @@
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
 import argparse
-import json
 import os
-import sys
-import time
 import platform
+import pprint
+import time
 from pathlib import Path
 
 import appdirs
 import vdf
 
 import steamsync.defs as defs
-from steamsync.launchers.egs import EpicGamesStoreLauncher
-from steamsync.launchers.launcher import Launcher
 import steamsync.steameditor as steameditor
+from steamsync.launchers.egs import EpicGamesStoreLauncher
 from steamsync.launchers.itch import ItchLauncher
-from steamsync.launchers.xbox import XboxLauncher
+from steamsync.launchers.launcher import Launcher
 from steamsync.launchers.legendary import LegendaryLauncher
+from steamsync.launchers.xbox import XboxLauncher
 
 
 def get_default_steam_path():
@@ -140,6 +139,14 @@ def parse_arguments():
         required=False,
     )
 
+    parser.add_argument(
+        "--dump-shortcut-vdf",
+        default=False,
+        action="store_true",
+        help="For debugging. Print the Steam shortcuts.vdf as text and exit.",
+        required=False,
+    )
+
     args = parser.parse_args()
     if not args.source:
         args.source = defs.TAGS
@@ -243,6 +250,7 @@ def to_shortcut(game, use_uri):
 
     return {
         "appname": game.display_name,
+        "appid": game.get_shortcut_id_signed(),
         "Exe": shortcut,
         "StartDir": game.install_folder,
         "icon": game.icon,
@@ -331,17 +339,18 @@ def add_games_to_shortcut_file(
         # Include args to handle mulitple explorer.exe options for xbox.
         path = f"{exe}|{launch_args}"
         path_to_index[path] = k
-        appname = v.get("appname")
         if download_art_unsupported and exe not in supported_games:
+            appname = v.get("appname")
             # Create a temp definition to specify info required to download.
             game = defs.GameDefinition(
                 exe,
                 appname,
-                "no-appid",  # v["appid"] doesn't already exist and don't do anything with it anyway
+                appname,  # No alternative name.
                 str(Path(exe).parent),
                 "",
                 None,
                 "ignore tag",
+                shortcut_id=v.get("appid"),  # may not exist yet
             )
             success = steamdb.download_art(user, game, should_replace_existing=False)
             if success:
@@ -371,8 +380,11 @@ def add_games_to_shortcut_file(
             path = f"{game.executable_path}|"
             i = path_to_index.get(path, None)
         if i:
+            old_shortcut = shortcuts["shortcuts"][i]
+            # Preserve the appid stored in shortcuts so existing art still
+            # matches. (Steam generates these ids if we don't assign them.)
+            game.shortcut_id = old_shortcut.get("appid")
             if replace_existing:
-                old_shortcut = shortcuts["shortcuts"][i]
                 new_shortcut = to_shortcut(game, use_uri)
                 print(
                     f"Replacing {old_shortcut['appname']} ({get_exe_from_shortcut(old_shortcut)} {old_shortcut.get('LaunchOptions', '')})\n     with {new_shortcut['appname']} ({get_exe_from_shortcut(new_shortcut)} {new_shortcut.get('LaunchOptions', '')})"
@@ -563,8 +575,42 @@ def get_steam_user(
 # Main
 
 
+def _load_shortcuts(shortcut_file_path, can_init_on_missing):
+    """Load the user's shortcuts.vdf file.
+
+    _load_shortcuts(str, bool) -> dict, str
+    """
+    if not os.path.exists(shortcut_file_path) and not can_init_on_missing:
+        message = f"Could not find shortcuts file at `{shortcut_file_path}`\nEither make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.\nOr enable option to initialize shortcuts  file. (--init-shortcuts-file)\nAborting."
+        print(message)
+        return
+    elif can_init_on_missing:
+        shortcuts = {"shortcuts": {}}
+    else:
+        # read in the shortcuts file
+        with open(shortcut_file_path, "rb") as sf:
+            shortcuts = vdf.binary_load(sf)
+
+    return shortcuts
+
+
 def main():
     args = parse_arguments()
+
+    steamdb = steameditor.SteamDatabase(
+        args.steam_path,
+        appdirs.user_cache_dir("steamsync"),
+        args.use_uri,
+    )
+
+    if args.dump_shortcut_vdf:
+        # Do this early to avoid showing game list.
+        user = get_steam_user(steamdb, args.steam_path, args.steamid)
+        shortcut_file_path = user.get_shortcut_filepath(steamdb._steam_path)
+        shortcuts = _load_shortcuts(shortcut_file_path, args.init_shortcuts_file)
+        print("Contents of", shortcut_file_path)
+        pprint.pprint(shortcuts)
+        return 0
 
     # 1. Collect all games from every enabled store
     all_games = collect_all_games(args)
@@ -582,53 +628,16 @@ def main():
         games = picks
 
     # 4. Pick the account to add shortcuts to (if needed)
-
-    steamdb = steameditor.SteamDatabase(
-        args.steam_path,
-        appdirs.user_cache_dir("steamsync"),
-        args.use_uri,
-    )
-
     user = get_steam_user(steamdb, args.steam_path, args.steamid)
 
     # 5. Write shortcuts to steam!
 
-    if args.download_art:
-        if args.download_art_all_shortcuts:
-            get_art_for_games = all_games
-            print("\nDownloading art for all detected games...")
-        else:
-            get_art_for_games = games
-            print("\nDownloading art for selected games...")
-
-        if args.replace_existing:
-            # We don't have an argument for replacing art and replacing
-            # shortcuts is pretty different, so explain the better path.
-            print(
-                f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
-            )
-        count = steamdb.download_art_multiple(
-            user, get_art_for_games, should_replace_existing=False
-        )
-        print(f"Downloaded new art for {count} games.")
-        print()
-
     print(f"Installing shortcuts for SteamID {user.username} `{user.steamid}`")
 
-    shortcut_file_path = os.path.join(
-        steamdb._steam_path, "userdata", user.steamid, "config", "shortcuts.vdf"
-    )
-
-    if not os.path.exists(shortcut_file_path) and not args.init_shortcuts_file:
-        message = f"Could not find shortcuts file at `{shortcut_file_path}`\nEither make a shortcut in Steam (Library ➡ ➕ Add Game ➡ Add a Non-Steam Game...) first.\nOr enable option to initialize shortcuts  file. (--init-shortcuts-file)\nAborting."
-        print(message)
+    shortcut_file_path = user.get_shortcut_filepath(steamdb._steam_path)
+    shortcuts = _load_shortcuts(shortcut_file_path, args.init_shortcuts_file)
+    if not shortcuts:
         return 1
-    elif args.init_shortcuts_file:
-        shortcuts = {"shortcuts": {}}
-    else:
-        # read in the shortcuts file
-        with open(shortcut_file_path, "rb") as sf:
-            shortcuts = vdf.binary_load(sf)
 
     should_write_vdf = False
     if args.remove_missing:
@@ -650,6 +659,28 @@ def main():
         args.download_art_all_shortcuts,
     )
     should_write_vdf |= result is not None
+
+    # Steam stores shortcut ids in shortcuts.vdf, so we can't download art
+    # until after merging new games into shortcuts.
+    if args.download_art:
+        if args.download_art_all_shortcuts:
+            get_art_for_games = all_games
+            print("\nDownloading art for all detected games...")
+        else:
+            get_art_for_games = games
+            print("\nDownloading art for selected games...")
+
+        if args.replace_existing:
+            # We don't have an argument for replacing art and replacing
+            # shortcuts is pretty different, so explain the better path.
+            print(
+                f"To replace existing art, delete the images in {user.get_grid_folder(steamdb._steam_path)}"
+            )
+        count = steamdb.download_art_multiple(
+            user, get_art_for_games, should_replace_existing=False
+        )
+        print(f"Downloaded new art for {count} games.")
+        print()
 
     if should_write_vdf:
         print()

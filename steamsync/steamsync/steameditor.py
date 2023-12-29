@@ -2,7 +2,6 @@
 
 # LICENSE: AGPLv3. See LICENSE at root of repo
 
-import binascii
 import json
 import os
 import re
@@ -58,6 +57,11 @@ class SteamAccount:
 
     def get_user_folder(self, steam_folder):
         return f"{steam_folder}/userdata/{self.steamid}"
+
+    def get_shortcut_filepath(self, steam_folder):
+        return os.path.join(
+            steam_folder, "userdata", self.steamid, "config/shortcuts.vdf"
+        )
 
 
 class SteamDatabase:
@@ -209,6 +213,10 @@ class SteamDatabase:
                 appid = name_to_id.get(long_name)
                 if appid:
                     break
+        if not appid:
+            # For: "Death's Door Win10" -> "Death's Door"
+            stripped = re.sub(r" win10\b", "", name, 1)
+            appid = name_to_id.get(stripped)
         if not appid:
             # For: "Yakuza Kiwami (PC)" -> "Yakuza Kiwami"
             stripped = re_remove_braces.sub("", name, 1)
@@ -363,17 +371,6 @@ class SteamDatabase:
             return True, dest_fname, f"Downloaded '{url}' to '{dest_fname}'."
         return False, None, f"Error {page.status_code} for '{url}'."
 
-    def _get_steam_shortcut_id(self, exe, appname):
-        """Get short id for non-steam shortcut.
-
-        _get_steam_shortcut_id(str, str) -> int
-        """
-        # Using the same method as steamgrid
-        # https://github.com/boppreh/steamgrid/blob/c796e612c67925413317f4012bdc771326f173c8/games.go#L100-L137
-        unique_id = "".join([exe, appname])
-        id_int = binascii.crc32(str.encode(unique_id)) | 0x80000000
-        return id_int
-
     def _get_grid_art_destinations(self, game, user):
         """Get filepaths for the grid images for the input shortcut.
 
@@ -381,15 +378,13 @@ class SteamDatabase:
         """
         grid = Path(user.get_grid_folder(self._steam_path))
         exe, args = game.get_launcher(self._prefer_uri)
-        shortcut = self._get_steam_shortcut_id(exe, game.display_name)
-        # For some reason Big Picture uses 64 bit ids.
-        # See https://github.com/scottrice/Ice/blob/7130b54c8d2fa7d0e2c0994ca1f2aa3fb2a27ba9/ice/steam_grid.py#L49-L64
-        bp_shortcut = (shortcut << 32) | 0x02000000
+        # vdf stores signed, but filenames use unsigned.
+        shortcut = game.get_shortcut_id_unsigned()
         return {
             "boxart": grid / f"{shortcut}p.jpg",
             "hero": grid / f"{shortcut}_hero.jpg",
             "logo": grid / f"{shortcut}_logo.png",
-            "10foot": grid / f"{bp_shortcut}.png",
+            "10foot": grid / f"{shortcut}_bigpicture.png",
         }
 
 
@@ -403,7 +398,7 @@ def _test():
     )
     user = db.enumerate_steam_accounts()[0]
     pprint.pp([user.steamid, user.username])
-    game_name = "Raji An Ancient Epic"
+    game_name = "Death's Door Win10"
     appid = db.guess_appid(game_name)
     print(game_name, appid)
 
