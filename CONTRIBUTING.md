@@ -11,7 +11,16 @@ PR!
 
 Eventually it would be nice to add other launchers, maybe?
 
-We use poetry for packaging. See the [poetry quickstart](https://python-poetry.org/docs/)
+We use poetry for packaging. See the [poetry quickstart](https://python-poetry.org/docs/).
+
+In short:
+
+```console
+pushd .\steamsync\steamsync
+pip install poetry
+poetry install
+poetry run steamsync --download-art
+```
 
 ### TODO
 Feel free to work on any of these and remove them from the list / submit a PR
