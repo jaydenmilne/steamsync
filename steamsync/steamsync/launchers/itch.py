@@ -52,6 +52,9 @@ class ItchLauncher(launcher.Launcher):
                     print(f"Warning: Failed to find executable for game '{title}'.")
                     continue
                 if len(exes) > 1:
+                    # Ignore Godot's extra game.console.exe executable.
+                    exes = [exe for exe in exes if not exe.name.endswith(".console.exe")]
+                if len(exes) > 1:
                     exes_list = "\n".join(str(e) for e in exes)
                     print(
                         f"Warning: Skipping game '{title}' with multiple executables:\n{exes_list}"
