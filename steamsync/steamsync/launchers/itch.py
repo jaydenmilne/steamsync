@@ -6,11 +6,10 @@ import gzip
 import json
 from pathlib import Path
 
-import toml
-
 import steamsync.defs as defs
-import steamsync.util as util
 import steamsync.launchers.launcher as launcher
+import steamsync.util as util
+import toml
 
 
 class ItchLauncher(launcher.Launcher):
