@@ -5,6 +5,7 @@
 import json
 import os
 import subprocess
+import xml.parsers.expat
 from pathlib import Path
 from xml.dom import minidom
 
@@ -152,8 +153,13 @@ def _is_game_judging_by_manifest(path_to_manifest):
 
     _is_game_judging_by_manifest(Path) -> bool
     """
-    with path_to_manifest.open("r", encoding="utf-8") as f:
-        doc = minidom.parse(f)
+    with path_to_manifest.open("r", encoding="utf-8", errors="ignore") as f:
+        try:
+            doc = minidom.parse(f)
+        except xml.parsers.expat.ExpatError as e:
+            # If unparsable, then it failed to tell us it's a game.
+            print(f"Failed to parse manifest and assuming not a game: '{path_to_manifest.as_posix()}'")
+            return None
 
     # Exclude Xbox apps which may otherwise look like a game
     name = [
