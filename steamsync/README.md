@@ -2,20 +2,21 @@
 [![PyPI version](https://badge.fury.io/py/steamsync.svg)](https://badge.fury.io/py/steamsync)
 
 Simple command line tool (and poorly documented library!) to automatically add
-games from the Epic Games Launcher to Steam.
+games from the Epic Games Launcher, Legendary, Xbox/Microsoft Store, or itch.io
+to Steam.
 
 Makes playing all of those free EGS games in Big Picture Mode a lot easier. In my experience,
 when launching from Big Picture Mode, Steam Input works as expected (even in Fortnite!).
 
-steamsync will scan all of the Epic Games Store games installed on your computer and
+steamsync will scan all supported storefronts for games installed on your computer and
 add them to your Steam Library. If a shortcut with the same path already exists, it will
 skip it, so it's safe to import all of your games over and over.
 
-steamsync attempts to be simple. It does not attempt to fetch any banner art, it
- simply uses the executable's icon as the icon in steam.
+By default, steamsync attempts to be simple and doesn't fetch any art. But
+there are options for downloading art, removing missing games, and lots more.
 
 ### Installation (brief)
-Requires > Python 3.8
+Requires Python >=3.10
 
 ```console
 $ pip install steamsync
@@ -24,8 +25,8 @@ $ steamsync
 
 ## Installation and Usage (for beginners)
 
-1. [Download Python 3.8](https://www.python.org/downloads/)
-2. Choose the latest version of Python 3.8, and get the "Windows x86-64 executable installer" option
+1. [Download Python 3.10](https://www.python.org/downloads/)
+2. Choose the latest version of Python 3.10, and get the "Windows x86-64 executable installer" option
 3. When installing Python, make sure to install pip and to *add Python to your PATH*
 4. Open Commmand Prompt (search Start Menu for cmd.exe)
 5. Type `pip install steamsync`, press enter.
@@ -155,7 +156,7 @@ Yes, yes it can! (you may need to adjust paths below)
 4. Set the trigger you want to use (daily, log in, etc), Next
 5. Action = Start a Program
 6. Program/Script is `pythonw`
-7. Add arguments `C:\Users\{username}\AppData\Local\Programs\Python\Python38\Scripts\steamsync.py --all --steamid={steam id}`, Next
+7. Add arguments `C:\Users\{username}\AppData\Local\Programs\Python\Python38\Scripts\steamsync.py --all --steamid={steam id} --remove-missing --download-art`, Next
 8. Make sure to restart Steam once in a while
 
 TADA!
