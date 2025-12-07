@@ -177,11 +177,13 @@ def print_games(games, use_uri):
 
 def filter_games(games):
     print(
-        "Which games do you want to install (blank = all, or comma separated list of numbers from table)?"
+        "Which games do you want to install (blank = all, comma separated list of numbers from table, q to quit)?"
     )
     selection = input(": ").strip()
     if selection == "":
         return games
+    if selection[0] == "q":
+        return False
 
     selection = selection.split(",")
 
@@ -625,6 +627,10 @@ def main():
         picks = None
         while not picks:
             picks = filter_games(games)
+            if picks is False:
+                print("Quitting...")
+                return 0
+
         games = picks
 
     # 4. Pick the account to add shortcuts to (if needed)
