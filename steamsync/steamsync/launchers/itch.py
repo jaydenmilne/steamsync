@@ -6,11 +6,10 @@ import gzip
 import json
 from pathlib import Path
 
-import toml
-
 import steamsync.defs as defs
-import steamsync.util as util
 import steamsync.launchers.launcher as launcher
+import steamsync.util as util
+import toml
 
 
 class ItchLauncher(launcher.Launcher):
@@ -52,6 +51,9 @@ class ItchLauncher(launcher.Launcher):
                 if not exes:
                     print(f"Warning: Failed to find executable for game '{title}'.")
                     continue
+                if len(exes) > 1:
+                    # Ignore Godot's extra game.console.exe executable.
+                    exes = [exe for exe in exes if not exe.name.endswith(".console.exe")]
                 if len(exes) > 1:
                     exes_list = "\n".join(str(e) for e in exes)
                     print(
