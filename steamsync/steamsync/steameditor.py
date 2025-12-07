@@ -155,9 +155,9 @@ class SteamDatabase:
         if not data:
             print("Downloading latest app list from Steam...")
             response = requests.get(
-                "http://api.steampowered.com/ISteamApps/GetAppList/v2"
+                "https://api.steampowered.com/IStoreService/GetAppList/v1/?key=API_KEY_PLACEHOLDER&max_results=50000"
             )
-            apps = response.json()["applist"]["apps"]
+            apps = response.json()["response"]["apps"]
             name_to_id = {}
             stripped_to_id = {}
             for g in apps:
