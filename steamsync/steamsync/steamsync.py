@@ -77,6 +77,13 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "--steam-api-key",
+        default=None,
+        help="Steam API key for fetching app definitions. Required when you're downloading art.",
+        required=False,
+    )
+
+    parser.add_argument(
         "--replace-existing",
         default=False,
         help="Instead of skipping existing shortcuts (ones with the same path), overwrite them with new data. Useful to repair broken shortcuts.",
@@ -599,8 +606,11 @@ def _load_shortcuts(shortcut_file_path, can_init_on_missing):
 def main():
     args = parse_arguments()
 
+
     steamdb = steameditor.SteamDatabase(
         args.steam_path,
+        args.steam_api_key,
+        args.download_art or args.download_art_all_shortcuts,
         appdirs.user_cache_dir("steamsync"),
         args.use_uri,
     )

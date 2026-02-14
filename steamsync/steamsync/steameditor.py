@@ -5,6 +5,7 @@
 import json
 import os
 import re
+import sys
 import shutil
 import unicodedata
 from datetime import datetime
@@ -68,7 +69,7 @@ class SteamDatabase:
 
     """Database of steam information."""
 
-    def __init__(self, steam_path, cache_folder, prefer_uri=False):
+    def __init__(self, steam_path, steam_api_key: str, pictures: bool, cache_folder, prefer_uri=False):
         """
         :steam_path: Path to folder containing steam.exe.
         :cache_folder: Where to store downloaded files.
@@ -76,7 +77,13 @@ class SteamDatabase:
         """
         self._steam_path = Path(steam_path)
         self._cache_folder = Path(cache_folder)
-        self._apps = self._load_app_list()
+
+        if pictures and steam_api_key is None:
+            print("If you want to fetch art, you need to provide a --steam-api-key")
+            sys.exit(1)
+
+        if pictures:
+            self._apps = self._load_app_list(steam_api_key)
         self._prefer_uri = prefer_uri
 
     def enumerate_steam_accounts(self):
@@ -129,7 +136,7 @@ class SteamDatabase:
         name = name.lower()
         return name
 
-    def _load_app_list(self):
+    def _load_app_list(self, steam_api_key: str):
         """Load or download the app list.
 
         _load_app_list() -> dict
@@ -155,9 +162,9 @@ class SteamDatabase:
         if not data:
             print("Downloading latest app list from Steam...")
             response = requests.get(
-                "http://api.steampowered.com/ISteamApps/GetAppList/v2"
+                f"https://api.steampowered.com/IStoreService/GetAppList/v1/?key={steam_api_key}&max_results=50000"
             )
-            apps = response.json()["applist"]["apps"]
+            apps = response.json()["response"]["apps"]
             name_to_id = {}
             stripped_to_id = {}
             for g in apps:

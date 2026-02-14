@@ -36,84 +36,79 @@ $ steamsync
 
 ## Usage
 ```
-(steamsync-py3.10) PS C:\Users\jayde\Documents\GitHub\steamsync> steamsync -h  
-usage: steamsync [-h] [--source {legendary,epicstore,itchio,xbox}] 
-                      [--egs-manifests EGS_MANIFESTS] 
-                      [--legendary-command LEGENDARY_COMMAND] 
-                      [--itch-library ITCH_LIBRARY] 
-                      [--steam-path STEAM_PATH] 
-                      [--all] 
-                      [--replace-existing] 
-                      [--remove-missing] 
-                      [--live-dangerously] 
-                      [--steamid STEAMID] 
-                      [--use-uri]
-                      [--download-art] 
-                      [--download-art-all-shortcuts] 
-                      [--init-shortcuts-file]
+steamsync -h
+usage: steamsync [-h] [--source {legendary,epicstore,itchio,xbox}]
+                 [--egs-manifests EGS_MANIFESTS]
+                 [--legendary-command LEGENDARY_COMMAND]
+                 [--itch-library ITCH_LIBRARY] [--steam-path STEAM_PATH]      
+                 [--all] [--steam-api-key STEAM_API_KEY]
+                 [--replace-existing] [--remove-missing]
+                 [--live-dangerously] [--steamid STEAMID] [--use-uri]
+                 [--download-art] [--download-art-all-shortcuts]
+                 [--init-shortcuts-file] [--dump-shortcut-vdf]
 
-Utility to import games from the Epic Games Store, Microsoft Store (Xbox for 
+Utility to import games from the Epic Games Store, Microsoft Store (Xbox for  
 Windows), and itch.io to your Steam library
 
 options:
   -h, --help            show this help message and exit
   --source {legendary,epicstore,itchio,xbox}
-                        Storefronts with games to add to Steam. If unspecified, 
-                        uses all sources. Use argument multiple times to select 
-                        multiple sources (--source itchio --source xbox). 
-                        (default: None)
+                        Storefronts with games to add to Steam. If
+                        unspecified, uses all sources. Use argument multiple  
+                        times to select multiple sources (--source itchio     
+                        --source xbox). (default: None)
   --egs-manifests EGS_MANIFESTS
-                        Path to search for Epic Games Store manifest files 
-                        (default: C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests)
+                        Path to search for Epic Games Store manifest files    
+                        (default: C:\ProgramData\Epic\EpicGamesLauncher\Data  
+                        \Manifests)
   --legendary-command LEGENDARY_COMMAND
-                        Command/Path to run 'legendary' executable 
-                        (default: legendary)
+                        Command/Path to run 'legendary' executable (default:  
+                        legendary)
   --itch-library ITCH_LIBRARY
-                        Path where the itch.io app installs games 
-                        (default: C:\Users\jayde\AppData\Roaming\itch\itch\apps)
+                        Path where the itch.io app installs games (default:   
+                        C:\Users\jayde\AppData\Roaming\itch\itch\apps)        
   --steam-path STEAM_PATH
-                        Path to Steam installation (default: C:\Program Files (x86)\Steam)
-  --all                 
-                        Install all games found, do not prompt user to select which 
-                        (default: False)
-  --replace-existing    
-                        Instead of skipping existing shortcuts (ones with the 
-                        same path), overwrite them with new data. Useful to 
-                        repair broken shortcuts. 
-                        (default: False)
-  --remove-missing      
-                        Remove shortcuts to games that no longer exist. Uses 
-                        selected sources to determine if games without executables 
-                        (uri or Xbox) still exist. i.e., if you don't include 
-                        xbox source all xbox games will appear to be missing. 
-                        (default: False)
-  --live-dangerously    
-                        Don't backup Steam's shortcuts.vdf file to shortcuts.vdf-{time}.bak 
-                        (default: False)
-  --steamid STEAMID     SteamID or username to install the shortcuts to, only 
-                        needed if >1 accounts on this machine 
-                        (default: )
-  --use-uri             
-                        Use a launcher URI (`com.epicgames.launcher://apps/fortnite?action=launch&silent=true`) 
-                        instead of the path to the executable (eg `C:\Fortnite\Fortnite.exe`). 
-                        Some games with online functionality (eg GTAV) require 
-                        being launched through the EGS. Other games work better with Steam      
-                        game streaming (eg Steam Link or Big Picture) using the path to the executable. 
-                        (default: False)
-  --download-art        
-                        Download Steam grid and Big Picture art from steam's 
-                        servers for games we're adding. Only downloads art that 
-                        we haven't already downloaded. 
-                        (default: False)
+                        Path to Steam installation (default: C:\Program       
+                        Files (x86)\Steam)
+  --all                 Install all games found, do not prompt user to        
+                        select which (default: False)
+  --steam-api-key STEAM_API_KEY
+                        Steam API key for fetching app definitions. Required  
+                        when you're downloading art. (default: None)
+  --replace-existing    Instead of skipping existing shortcuts (ones with     
+                        the same path), overwrite them with new data. Useful  
+                        to repair broken shortcuts. (default: False)
+  --remove-missing      Remove shortcuts to games that no longer exist. Uses  
+                        selected sources to determine if games without        
+                        executables (uri or Xbox) still exist. i.e., if you   
+                        don't include xbox source all xbox games will appear  
+                        to be missing. (default: False)
+  --live-dangerously    Don't backup Steam's shortcuts.vdf file to
+                        shortcuts.vdf-{time}.bak (default: False)
+  --steamid STEAMID     SteamID or username to install the shortcuts to,      
+                        only needed if >1 accounts on this machine (default:  
+                        )
+  --use-uri             Use a launcher URI (`com.epicgames.launcher://apps/f  
+                        ortnite?action=launch&silent=true`) instead of the    
+                        path to the executable (eg
+                        `C:\Fortnite\Fortnite.exe`). Some games with online   
+                        functionality (eg GTAV) require being launched        
+                        through the EGS. Other games work better with Steam   
+                        game streaming (eg Steam Link or Big Picture) using   
+                        the path to the executable. (default: False)
+  --download-art        Download Steam grid and Big Picture art from steam's  
+                        servers for games we're adding. Only downloads art    
+                        that we haven't already downloaded. (default: False)  
   --download-art-all-shortcuts
-                        Download Steam grid and Big Picture art for all non-steam 
-                        game shortcuts. Only downloads art that we haven't already 
-                        downloaded. Implies --download-art 
+                        Download Steam grid and Big Picture art for all non-  
+                        steam game shortcuts. Only downloads art that we      
+                        haven't already downloaded. Implies --download-art    
                         (default: False)
   --init-shortcuts-file
-                        Initialize Steam shortcuts.vdf file if it doesn't exist.
-                        EXPERIMENTAL!! 
-                        (default: False)
+                        Initialize Steam shortcuts.vdf file if it doesn't     
+                        exist. EXPERIMENTAL!! (default: False)
+  --dump-shortcut-vdf   For debugging. Print the Steam shortcuts.vdf as text  
+                        and exit. (default: False)
 ```
 
 ### FAQ
@@ -160,3 +155,9 @@ Yes, yes it can! (you may need to adjust paths below)
 8. Make sure to restart Steam once in a while
 
 TADA!
+
+## Developing
+
+* `poetry install`
+* `poetry run steamsync`
+* `potry publish --build`
