@@ -10,13 +10,26 @@ shortcuts. It supports (to an extent):
 
 It can also attempt to fetch art from the Steam catalog (`--download-art`)
 
-You can use it via:
-- [The command line, via pip](steamsync/README.md)
-- [A more user-friendly but out of date Windows application](steamsync-gui/README.md)
+## Install
 
-## TL;DR
+### Command Line
+
+Download an `.exe` from [the GitHub releases on the right](https://github.com/jaydenmilne/steamsync/releases)
+
+OR 
+
+```
+pip install steamsync
+```
+
+then run
+
+```
+steamsync
+```
 
 For more detailed instructions on using the CLI, see [here](steamsync/README.md).
 
-1. `pip install steamsync`
-2. `steamsync`
+### GUI
+
+There is an out of date UI available [here](steamsync-gui/README.md)
