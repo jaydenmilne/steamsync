@@ -10,7 +10,7 @@ Eventually, the goal is to support other launchers.
 
 ## Using The App
 ### Installation
-Head over to [the latest GUI release]([https://github.com/jaydenmilne/steamsync/releases/latest](https://github.com/jaydenmilne/steamsync/releases/tag/0.3.0)) and 
+Head over to [the latest GUI release]([https://github.com/jaydenmilne/steamsync/releases/latest](https://github.com/jaydenmilne/steamsync/releases/tag/0.3.0) and 
 grab the latest `.exe`, and run it. There is no need to install anything.
 
 ### Usage
