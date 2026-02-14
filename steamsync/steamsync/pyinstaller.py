@@ -8,6 +8,7 @@ def install():
     PyInstaller.__main__.run([
         path_to_main,
         '--console',
+        '--onefile',
         '--icon',
         str(HERE.parent / 'logo.ico')
     ])
