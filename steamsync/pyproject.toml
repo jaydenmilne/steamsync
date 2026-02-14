@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "steamsync"
-version = "1.0.0"
+version = "1.0.1"
 description = "Tool to automatically add games from the Epic Games Launcher to Steam"
 authors = ["Jayden Milne <jaydenmilne@users.noreply.github.com>"]
 readme = "README.md"
@@ -19,9 +19,10 @@ include = ["steamsync/launchers/static/list_xbox_games.ps1"]
 
 [tool.poetry.scripts]
 steamsync = "steamsync.steamsync:main"
+exe = "steamsync.pyinstaller:install"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10"
 requests = "^2.28.2"
 toml = "^0.10.2"
 vdf = "^3.3"

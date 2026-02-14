@@ -161,3 +161,4 @@ TADA!
 * `poetry install`
 * `poetry run steamsync`
 * `potry publish --build`
+* `pip install pyinstaller && poetry run exe`
